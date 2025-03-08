@@ -1,7 +1,6 @@
 const crypto = require("crypto");
 
 exports.handler = async (event, context) => {
-  // Проверка метода запроса
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -21,9 +20,7 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Вычисление HMAC на основе тела запроса
   const hmac = crypto.createHmac("sha256", SECRET);
-  // event.body — строка, поэтому используем её напрямую
   hmac.update(event.body, "utf8");
   const digest = "sha256=" + hmac.digest("hex");
 
@@ -34,7 +31,6 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Попытка распарсить JSON-пейлоад
   let payload;
   try {
     payload = JSON.parse(event.body);
@@ -45,30 +41,24 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Определение типа события из заголовка
   const eventType =
     event.headers["x-github-event"] || event.headers["X-GitHub-Event"];
   console.log(`Получено событие: ${eventType}`);
 
-  // Пример обработки событий
   if (eventType === "create") {
-    console.log(
-      "Обработка события создания ветки для перевода карточки в In Progress"
-    );
-    // Здесь разместите логику для перемещения карточки
+    console.log("Обработка события создания ветки (In Progress)");
+  } else if (eventType === "delete") {
+    console.log("Обработка события удаления ветки/тега");
   } else if (eventType === "pull_request") {
-    console.log(
-      "Обработка события pull_request для перевода карточки в Review"
-    );
-    // Здесь разместите логику для перемещения карточки
-  } else if (eventType === "review") {
-    console.log("Обработка события review для проверки одобрений");
-    // Здесь разместите логику для перемещения карточки в Done
+    console.log("Обработка события pull_request (Review)");
+  } else if (eventType === "pull_request_review") {
+    console.log("Обработка события pull_request_review (проверка одобрений)");
+  } else if (eventType === "push") {
+    console.log("Обработка события push (коммиты в ветку)");
   } else {
     console.log("Необработанный тип события:", eventType);
   }
 
-  // Возвращаем успешный ответ
   return {
     statusCode: 200,
     body: "Событие обработано",
