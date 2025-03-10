@@ -5,7 +5,7 @@ export default async function handler(event, context) {
   console.log("Received event:", event);
 
   // Проверка метода запроса
-  if (event.httpMethod !== "POST") {
+  if (event.method !== "POST") {
     console.warn("Invalid HTTP method:", event.httpMethod);
     return new Response("Method not allowed", { status: 405 });
   }
