@@ -6,27 +6,26 @@ import fetch from "node-fetch";
 async function fetchProjectItems(projectId, token) {
   const graphqlUrl = "https://api.github.com/graphql";
   const query = `
-      query {
-        node(id: "${projectId}") {
-          ... on ProjectV2 {
-            items(first: 100) {
-              nodes {
-                id
-                content {
-                  ... on Issue {
-                    number
-                    title
-                    url
-                  }
-                }
-                fieldValues(first: 10) {  
-                  nodes {
-                    __typename
-                    field {
-                      id
+        query {
+          node(id: "${projectId}") {
+            ... on ProjectV2 {
+              items(first: 100) {
+                nodes {
+                  id
+                  content {
+                    ... on Issue {
+                      number
+                      title
+                      url
                     }
-                    ... on ProjectV2ItemFieldSingleSelectValue {
-                      optionId
+                  }
+                  fieldValues(first: 10) {  
+                    nodes {
+                      __typename
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        fieldId
+                        optionId
+                      }
                     }
                   }
                 }
@@ -34,8 +33,7 @@ async function fetchProjectItems(projectId, token) {
             }
           }
         }
-      }
-    `;
+      `;
 
   try {
     const response = await fetch(graphqlUrl, {
@@ -74,6 +72,7 @@ async function fetchProjectItems(projectId, token) {
  */
 async function getIssueItemByNumber(
   issueNumber,
+
   projectId,
   columnFieldId,
   token
