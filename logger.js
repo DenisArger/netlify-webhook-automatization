@@ -1,4 +1,4 @@
-import { sendTelegramMessage } from "../../telegram.js";
+import { sendTelegramMessage } from "./telegram";
 
 // Сохраняем оригинальные методы
 const originalConsoleLog = console.log;
