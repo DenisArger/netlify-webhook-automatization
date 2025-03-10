@@ -9,7 +9,7 @@ import fetch from "node-fetch";
  * @returns {Promise<Array>} - Массив элементов проекта.
  * @throws {Error} - Если API возвращает ошибку.
  */
-async function fetchProjectItems(projectId, columnFieldId, token) {
+async function fetchProjectItems(projectId, token) {
   const graphqlUrl = "https://api.github.com/graphql";
   const query = `
       query {
@@ -25,9 +25,12 @@ async function fetchProjectItems(projectId, columnFieldId, token) {
                     url
                   }
                 }
-                fieldValueByFieldId(fieldId: "${columnFieldId}") {
-                  ... on ProjectV2ItemFieldSingleSelectValue {
-                    optionId
+                fieldValues(first: 10) {  
+                  nodes {
+                    __typename
+                    ... on ProjectV2ItemFieldSingleSelectValue {
+                      optionId
+                    }
                   }
                 }
               }
@@ -52,8 +55,7 @@ async function fetchProjectItems(projectId, columnFieldId, token) {
     throw new Error("Ошибка сети при запросе к GitHub API");
   }
 
-  const responseText = await response.text(); // Читаем текст ответа для логирования
-
+  const responseText = await response.text();
   if (!response.ok) {
     console.error(
       `❌ Ошибка запроса: Статус ${response.status}, Тело ответа: ${responseText}`
