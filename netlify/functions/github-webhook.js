@@ -8,6 +8,7 @@ export default async function handler(event, context) {
     console.warn("Invalid HTTP method:", event.httpMethod);
     return new Response("Method not allowed", { status: 405 });
   }
+  console.log("1Received headers:", headers);
 
   const SECRET = process.env.WEBHOOK_SECRET;
 
