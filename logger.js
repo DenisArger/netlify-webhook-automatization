@@ -1,11 +1,12 @@
 import { sendTelegramMessage } from "./telegram";
 
-// Сохраняем оригинальные методы
+// Оригинальные методы консоли
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
 
 /**
- * Форматирует аргументы в одну строку.
+ * Форматирует аргументы в читаемый вид.
  *
  * @param {Array} args - Массив аргументов.
  * @returns {string} - Форматированная строка.
@@ -15,9 +16,9 @@ function formatMessage(args) {
     .map((arg) => {
       if (typeof arg === "object") {
         try {
-          return JSON.stringify(arg);
+          return JSON.stringify(arg, null, 2); // Форматируем JSON с отступами
         } catch (e) {
-          return String(arg);
+          return "[Unserializable Object]";
         }
       }
       return String(arg);
@@ -25,23 +26,46 @@ function formatMessage(args) {
     .join(" ");
 }
 
-// Переопределяем console.log
-console.log = function (...args) {
-  const message = formatMessage(args);
-  originalConsoleLog.apply(console, args);
-  // Асинхронно отправляем сообщение в Telegram (не блокируя основной поток)
-  sendTelegramMessage(`[LOG] ${message}`).catch((err) => {
+/**
+ * Логирование с отправкой в Telegram.
+ *
+ * @param {"log" | "error" | "warn"} type - Тип лога.
+ * @param {Array} args - Аргументы.
+ */
+function logToTelegram(type, args) {
+  const timestamp = new Date().toISOString();
+  const formattedMessage = `[${type.toUpperCase()}] ${timestamp}\n${formatMessage(
+    args
+  )}`;
+
+  // Обрезаем сообщение, если оно слишком длинное для Telegram
+  const maxLength = 4000;
+  const message =
+    formattedMessage.length > maxLength
+      ? formattedMessage.slice(0, maxLength - 3) + "..."
+      : formattedMessage;
+
+  sendTelegramMessage(message).catch((err) => {
     originalConsoleError("Error sending log message to Telegram:", err);
   });
+}
+
+// Переопределяем console.log
+console.log = function (...args) {
+  originalConsoleLog.apply(console, args);
+  logToTelegram("log", args);
 };
 
 // Переопределяем console.error
 console.error = function (...args) {
-  const message = formatMessage(args);
   originalConsoleError.apply(console, args);
-  sendTelegramMessage(`[ERROR] ${message}`).catch((err) => {
-    originalConsoleError("Error sending error message to Telegram:", err);
-  });
+  logToTelegram("error", args);
+};
+
+// Переопределяем console.warn
+console.warn = function (...args) {
+  originalConsoleWarn.apply(console, args);
+  logToTelegram("warn", args);
 };
 
 export default console;
