@@ -1,15 +1,10 @@
 import { moveTaskToInProgress } from "../../taskMover.js";
 import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
-import("../../logger.js");
 
 export default async function handler(event, context) {
-  // Обработка HTTP-метода, разрешаем только POST
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Method not allowed",
-    };
+    return new Response("Method not allowed", { status: 405 });
   }
 
   const SECRET = process.env.WEBHOOK_SECRET;
@@ -18,27 +13,18 @@ export default async function handler(event, context) {
     event.headers["X-Hub-Signature-256"];
 
   if (!signatureHeader) {
-    return {
-      statusCode: 400,
-      body: "Missing X-Hub-Signature-256 header",
-    };
+    return new Response("Missing X-Hub-Signature-256 header", { status: 400 });
   }
 
   if (!verifySignature(event.body, SECRET, signatureHeader)) {
-    return {
-      statusCode: 401,
-      body: "Invalid signature",
-    };
+    return new Response("Invalid signature", { status: 401 });
   }
 
   let payload;
   try {
     payload = JSON.parse(event.body);
   } catch (error) {
-    return {
-      statusCode: 400,
-      body: "Invalid JSON",
-    };
+    return new Response("Invalid JSON", { status: 400 });
   }
 
   const eventType =
@@ -96,16 +82,11 @@ export default async function handler(event, context) {
     );
   } catch (err) {
     console.error("Error sending to Telegram:", err);
-    return {
-      statusCode: 500,
-      body: "Error sending Telegram message",
-    };
+    return new Response("Error sending Telegram message", { status: 500 });
   }
 
-  return new Response(
-    JSON.stringify({
-      statusCode: 200,
-      body: "Event processed",
-    })
-  );
+  return new Response(JSON.stringify({ message: "Event processed" }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
