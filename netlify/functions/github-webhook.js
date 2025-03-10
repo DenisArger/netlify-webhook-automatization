@@ -45,23 +45,36 @@ export default async function handler(event, context) {
           `Extracted issue number ${issueNumber} from branch ${branchName}`
         );
         try {
-          await moveTaskToInProgress(issueNumber);
-          console.log(`Task ${issueNumber} moved to In Progress.`);
+          const result = await moveTaskToInProgress(issueNumber);
+          const statusMessage = result.alreadyInProgress
+            ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
+            : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
+
+          console.log(statusMessage);
+
+          await sendTelegramMessage(
+            `🔔 GitHub Webhook: ${eventType}\n` +
+              `📂 Репозиторий: ${
+                payload?.repository?.full_name || "unknown"
+              }\n` +
+              `🔢 Номер задачи: ${issueNumber}\n` +
+              `🔗 Ссылка: ${result.issueUrl || "нет данных"}\n` +
+              `${statusMessage}`
+          );
         } catch (err) {
           console.error(
-            `Error moving task ${issueNumber} to In Progress:`,
+            `❌ Ошибка при перемещении задачи ${issueNumber} в IN_PROGRESS:`,
             err
+          );
+          await sendTelegramMessage(
+            `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
           );
         }
       } else {
         console.log(
-          `Branch name "${branchName}" does not match the required pattern.`
+          `⚠️ Branch name "${branchName}" does not соответств the expected pattern.`
         );
       }
-    } else {
-      console.log(
-        `Create event is not for a branch (ref_type: ${payload.ref_type}).`
-      );
     }
   } else if (eventType === "delete") {
     console.log("Processing branch/tag deletion event");

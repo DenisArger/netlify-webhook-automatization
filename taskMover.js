@@ -150,7 +150,7 @@ async function moveTaskToInProgress(issueNumber) {
 
   if (!token || !projectId || !columnFieldId || !inProgressOptionId) {
     throw new Error(
-      "Missing required environment variables for updating issue status."
+      "❌ Отсутствуют необходимые переменные окружения для обновления статуса задачи."
     );
   }
 
@@ -161,16 +161,19 @@ async function moveTaskToInProgress(issueNumber) {
     columnFieldId,
     token
   );
+
   if (!issueItem) {
-    throw new Error(`Issue with number ${issueNumber} not found in project.`);
+    throw new Error(`❌ Задача #${issueNumber} не найдена в проекте.`);
   }
+
+  const issueUrl = issueItem?.content?.url || "нет ссылки";
 
   // Проверяем, не находится ли задача уже в IN_PROGRESS
   if (issueItem?.fieldValueByFieldId?.optionId === inProgressOptionId) {
-    console.log(
-      `Issue ${issueNumber} is already in IN_PROGRESS. No update required.`
-    );
-    return { issueUrl: issueItem?.content?.url, alreadyInProgress: true };
+    const message = `⚠️ Задача #${issueNumber} уже находится в IN_PROGRESS.\n🔗 Ссылка: ${issueUrl}`;
+    console.log(message);
+    await sendTelegramMessage(message); // Отправляем в Telegram
+    return { issueUrl, alreadyInProgress: true };
   }
 
   // Обновляем статус задачи на IN_PROGRESS
@@ -181,10 +184,12 @@ async function moveTaskToInProgress(issueNumber) {
     inProgressOptionId,
     token
   );
-  console.log(
-    `Issue ${issueNumber} has been successfully moved to IN_PROGRESS.`
-  );
-  return { issueUrl: issueItem?.content?.url, alreadyInProgress: false };
+
+  const successMessage = `✅ Задача #${issueNumber} перемещена в IN_PROGRESS.\n🔗 Ссылка: ${issueUrl}`;
+  console.log(successMessage);
+  await sendTelegramMessage(successMessage); // Отправляем в Telegram
+
+  return { issueUrl, alreadyInProgress: false };
 }
 
 export { moveTaskToInProgress };
