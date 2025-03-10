@@ -1,6 +1,7 @@
 import { moveTaskToInProgress } from "../../taskMover.js";
 import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
+import("../../logger.js");
 
 export default async function handler(event, context) {
   if (event.httpMethod !== "POST") {
