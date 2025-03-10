@@ -1,7 +1,5 @@
-import { moveTaskToInProgress } from "../../taskMover.js";
 import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
-import("../../logger.js");
 
 export default async function handler(event, context) {
   if (event.httpMethod !== "POST") {
@@ -33,49 +31,7 @@ export default async function handler(event, context) {
   console.log(`Received event: ${eventType}`);
 
   if (eventType === "create") {
-    if (payload.ref_type === "branch") {
-      const branchName = payload.ref;
-
-      const branchRegex = /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i;
-      const match = branchName.match(branchRegex);
-
-      if (match) {
-        const issueNumber = match[2];
-        console.log(
-          `Extracted issue number ${issueNumber} from branch ${branchName}`
-        );
-        try {
-          const result = await moveTaskToInProgress(issueNumber);
-          const statusMessage = result.alreadyInProgress
-            ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
-            : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
-
-          console.log(statusMessage);
-
-          await sendTelegramMessage(
-            `🔔 GitHub Webhook: ${eventType}\n` +
-              `📂 Репозиторий: ${
-                payload?.repository?.full_name || "unknown"
-              }\n` +
-              `🔢 Номер задачи: ${issueNumber}\n` +
-              `🔗 Ссылка: ${result.issueUrl || "нет данных"}\n` +
-              `${statusMessage}`
-          );
-        } catch (err) {
-          console.error(
-            `❌ Ошибка при перемещении задачи ${issueNumber} в IN_PROGRESS:`,
-            err
-          );
-          await sendTelegramMessage(
-            `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
-          );
-        }
-      } else {
-        console.log(
-          `⚠️ Branch name "${branchName}" does not соответств the expected pattern.`
-        );
-      }
-    }
+    console.log("Processing branch creation event (In Progress)");
   } else if (eventType === "delete") {
     console.log("Processing branch/tag deletion event");
   } else if (eventType === "pull_request") {
