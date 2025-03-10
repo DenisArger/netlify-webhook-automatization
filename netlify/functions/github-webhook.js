@@ -8,19 +8,10 @@ export default async function handler(event, context) {
     console.warn("Invalid HTTP method:", event.httpMethod);
     return new Response("Method not allowed", { status: 405 });
   }
-  console.log("1Received headers:", event.headers);
 
   const SECRET = process.env.WEBHOOK_SECRET;
 
-  // Нормализация заголовков
-  const headers = Object.keys(event.headers).reduce((acc, key) => {
-    acc[key.toLowerCase()] = event.headers[key];
-    return acc;
-  }, {});
-
-  console.log("Received headers:", headers);
-
-  const signatureHeader = headers["x-hub-signature-256"];
+  const signatureHeader = event.headers.get("x-hub-signature-256");
 
   if (!signatureHeader) {
     console.error("Missing X-Hub-Signature-256 header");
