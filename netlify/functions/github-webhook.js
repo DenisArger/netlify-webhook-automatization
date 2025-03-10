@@ -1,6 +1,14 @@
 import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
 
+async function streamToString(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 export default async function handler(event, context) {
   console.log("Received event:", event);
 
@@ -12,21 +20,25 @@ export default async function handler(event, context) {
   const SECRET = process.env.WEBHOOK_SECRET;
 
   const signatureHeader = event.headers.get("x-hub-signature-256");
-
   if (!signatureHeader) {
     console.error("Missing X-Hub-Signature-256 header");
     return new Response("Missing X-Hub-Signature-256 header", { status: 400 });
   }
 
-  if (!verifySignature(event.body, SECRET, signatureHeader)) {
+  const bodyString =
+    typeof event.body === "string"
+      ? event.body
+      : await streamToString(event.body);
+
+  if (!verifySignature(bodyString, SECRET, signatureHeader)) {
     console.error("Invalid signature detected");
     return new Response("Invalid signature", { status: 401 });
   }
 
   let payload;
   try {
-    console.log("Raw event body:", event.body);
-    payload = JSON.parse(event.body);
+    console.log("Raw event body:", bodyString);
+    payload = JSON.parse(bodyString);
   } catch (error) {
     console.error("JSON parsing error:", error.message);
     return new Response("Invalid JSON", { status: 400 });
