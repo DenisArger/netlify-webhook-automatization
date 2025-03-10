@@ -1,4 +1,4 @@
-const fetch = require("node-fetch");
+import fetch from "node-fetch";
 
 /**
  * Получает список элементов проекта.
@@ -45,15 +45,19 @@ async function fetchProjectItems(projectId, columnFieldId, token) {
     },
     body: JSON.stringify({ query }),
   });
-  const data = await response.json();
 
+  if (!response.ok) {
+    throw new Error(`GitHub API responded with status: ${response.status}`);
+  }
+
+  const data = await response.json();
   if (data.errors) {
     throw new Error(
       "Error fetching project items: " + JSON.stringify(data.errors)
     );
   }
 
-  return data.data.node.items.nodes;
+  return data?.data?.node?.items?.nodes || [];
 }
 
 /**
@@ -72,12 +76,9 @@ async function getIssueItemByNumber(
   token
 ) {
   const items = await fetchProjectItems(projectId, columnFieldId, token);
-  for (const item of items) {
-    if (item.content && Number(item.content.number) === Number(issueNumber)) {
-      return item;
-    }
-  }
-  return null;
+  return (
+    items.find((item) => item?.content?.number === Number(issueNumber)) || null
+  );
 }
 
 /**
@@ -118,8 +119,12 @@ async function updateIssueStatus(
     },
     body: JSON.stringify({ query: mutation }),
   });
-  const data = await response.json();
 
+  if (!response.ok) {
+    throw new Error(`GitHub API responded with status: ${response.status}`);
+  }
+
+  const data = await response.json();
   if (data.errors) {
     throw new Error(
       "Error updating issue status: " + JSON.stringify(data.errors)
@@ -161,14 +166,11 @@ async function moveTaskToInProgress(issueNumber) {
   }
 
   // Проверяем, не находится ли задача уже в IN_PROGRESS
-  if (
-    issueItem.fieldValueByFieldId &&
-    issueItem.fieldValueByFieldId.optionId === inProgressOptionId
-  ) {
+  if (issueItem?.fieldValueByFieldId?.optionId === inProgressOptionId) {
     console.log(
       `Issue ${issueNumber} is already in IN_PROGRESS. No update required.`
     );
-    return { issueUrl: issueItem.content.url, alreadyInProgress: true };
+    return { issueUrl: issueItem?.content?.url, alreadyInProgress: true };
   }
 
   // Обновляем статус задачи на IN_PROGRESS
@@ -182,7 +184,7 @@ async function moveTaskToInProgress(issueNumber) {
   console.log(
     `Issue ${issueNumber} has been successfully moved to IN_PROGRESS.`
   );
-  return { issueUrl: issueItem.content.url, alreadyInProgress: false };
+  return { issueUrl: issueItem?.content?.url, alreadyInProgress: false };
 }
 
-module.exports = { moveTaskToInProgress };
+export { moveTaskToInProgress };

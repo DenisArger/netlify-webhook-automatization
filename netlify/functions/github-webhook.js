@@ -1,9 +1,9 @@
-const { moveTaskToInProgress } = require("../../taskMover");
-const { sendTelegramMessage } = require("../../telegram");
-const { verifySignature } = require("../../utils");
-require("../../logger");
+import { moveTaskToInProgress } from "../../taskMover.js";
+import { sendTelegramMessage } from "../../telegram.js";
+import { verifySignature } from "../../utils.js";
+import("../../logger.js");
 
-exports.handler = async (event, context) => {
+export default async function handler(event, context) {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -101,4 +101,4 @@ exports.handler = async (event, context) => {
     statusCode: 200,
     body: "Event processed",
   };
-};
+}

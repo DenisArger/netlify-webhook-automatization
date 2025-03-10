@@ -1,3 +1,11 @@
+import fetch from "node-fetch";
+
+/**
+ * Отправляет сообщение в Telegram.
+ *
+ * @param {string} text - Текст сообщения.
+ * @throws {Error} - Если не удается отправить сообщение.
+ */
 async function sendTelegramMessage(text) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -20,18 +28,22 @@ async function sendTelegramMessage(text) {
     body.message_thread_id = Number(messageThreadId);
   }
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to send message to Telegram: ${errorBody}`);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Failed to send message to Telegram: ${errorBody}`);
+    }
+  } catch (error) {
+    throw new Error(
+      `Network error or failure while sending message: ${error.message}`
+    );
   }
 }
 
-module.exports = {
-  sendTelegramMessage,
-};
+export { sendTelegramMessage };

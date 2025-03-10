@@ -1,4 +1,4 @@
-const { sendTelegramMessage } = require("./telegram");
+import { sendTelegramMessage } from "../../telegram.js";
 
 // Сохраняем оригинальные методы
 const originalConsoleLog = console.log;
@@ -44,4 +44,4 @@ console.error = function (...args) {
   });
 };
 
-module.exports = console;
+export default console;
