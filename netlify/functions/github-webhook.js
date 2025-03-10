@@ -1,5 +1,7 @@
+const { moveTaskToInProgress } = require("../../taskMover");
 const { sendTelegramMessage } = require("../../telegram");
 const { verifySignature } = require("../../utils");
+require("../../logger");
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
@@ -43,7 +45,36 @@ exports.handler = async (event, context) => {
   console.log(`Received event: ${eventType}`);
 
   if (eventType === "create") {
-    console.log("Processing branch creation event (In Progress)");
+    if (payload.ref_type === "branch") {
+      const branchName = payload.ref;
+
+      const branchRegex = /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i;
+      const match = branchName.match(branchRegex);
+
+      if (match) {
+        const issueNumber = match[2];
+        console.log(
+          `Extracted issue number ${issueNumber} from branch ${branchName}`
+        );
+        try {
+          await moveTaskToInProgress(issueNumber);
+          console.log(`Task ${issueNumber} moved to In Progress.`);
+        } catch (err) {
+          console.error(
+            `Error moving task ${issueNumber} to In Progress:`,
+            err
+          );
+        }
+      } else {
+        console.log(
+          `Branch name "${branchName}" does not match the required pattern.`
+        );
+      }
+    } else {
+      console.log(
+        `Create event is not for a branch (ref_type: ${payload.ref_type}).`
+      );
+    }
   } else if (eventType === "delete") {
     console.log("Processing branch/tag deletion event");
   } else if (eventType === "pull_request") {
