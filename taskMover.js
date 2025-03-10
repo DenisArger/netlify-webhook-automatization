@@ -12,48 +12,72 @@ import fetch from "node-fetch";
 async function fetchProjectItems(projectId, columnFieldId, token) {
   const graphqlUrl = "https://api.github.com/graphql";
   const query = `
-    query {
-      node(id: "${projectId}") {
-        ... on ProjectV2 {
-          items(first: 100) {
-            nodes {
-              id
-              content {
-                ... on Issue {
-                  number
-                  title
-                  url
+      query {
+        node(id: "${projectId}") {
+          ... on ProjectV2 {
+            items(first: 100) {
+              nodes {
+                id
+                content {
+                  ... on Issue {
+                    number
+                    title
+                    url
+                  }
                 }
-              }
-              fieldValueByFieldId(fieldId: "${columnFieldId}") {
-                ... on ProjectV2ItemFieldSingleSelectValue {
-                  optionId
+                fieldValueByFieldId(fieldId: "${columnFieldId}") {
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    optionId
+                  }
                 }
               }
             }
           }
         }
       }
-    }
-  `;
+    `;
 
-  const response = await fetch(graphqlUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`GitHub API responded with status: ${response.status}`);
+  let response;
+  try {
+    response = await fetch(graphqlUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query }),
+    });
+  } catch (networkError) {
+    console.error("❌ Ошибка сети при запросе к GitHub API:", networkError);
+    throw new Error("Ошибка сети при запросе к GitHub API");
   }
 
-  const data = await response.json();
-  if (data.errors) {
+  const responseText = await response.text(); // Читаем текст ответа для логирования
+
+  if (!response.ok) {
+    console.error(
+      `❌ Ошибка запроса: Статус ${response.status}, Тело ответа: ${responseText}`
+    );
     throw new Error(
-      "Error fetching project items: " + JSON.stringify(data.errors)
+      `Ошибка запроса: GitHub API вернул статус ${response.status}. Подробности: ${responseText}`
+    );
+  }
+
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (jsonError) {
+    console.error("❌ Ошибка парсинга JSON ответа:", responseText, jsonError);
+    throw new Error("Ошибка парсинга JSON ответа от GitHub API");
+  }
+
+  if (data.errors) {
+    console.error(
+      "❌ Ошибки GraphQL API:",
+      JSON.stringify(data.errors, null, 2)
+    );
+    throw new Error(
+      "Ошибка GraphQL API: " + JSON.stringify(data.errors, null, 2)
     );
   }
 
