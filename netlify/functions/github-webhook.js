@@ -3,10 +3,7 @@ import { verifySignature } from "../../utils.js";
 
 export default async function handler(event, context) {
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Method not allowed",
-    };
+    return new Response("Method not allowed", { status: 405 });
   }
 
   const SECRET = process.env.WEBHOOK_SECRET;
@@ -15,45 +12,42 @@ export default async function handler(event, context) {
     event.headers["X-Hub-Signature-256"];
 
   if (!signatureHeader) {
-    return {
-      statusCode: 400,
-      body: "Missing X-Hub-Signature-256 header",
-    };
+    return new Response("Missing X-Hub-Signature-256 header", { status: 400 });
   }
 
   if (!verifySignature(event.body, SECRET, signatureHeader)) {
-    return {
-      statusCode: 401,
-      body: "Invalid signature",
-    };
+    return new Response("Invalid signature", { status: 401 });
   }
 
   let payload;
   try {
     payload = JSON.parse(event.body);
   } catch (error) {
-    return {
-      statusCode: 400,
-      body: "Invalid JSON",
-    };
+    return new Response("Invalid JSON", { status: 400 });
   }
 
   const eventType =
     event.headers["x-github-event"] || event.headers["X-GitHub-Event"];
   console.log(`Received event: ${eventType}`);
 
-  if (eventType === "create") {
-    console.log("Processing branch creation event (In Progress)");
-  } else if (eventType === "delete") {
-    console.log("Processing branch/tag deletion event");
-  } else if (eventType === "pull_request") {
-    console.log("Processing pull_request event (Review)");
-  } else if (eventType === "pull_request_review") {
-    console.log("Processing pull_request_review event (approval check)");
-  } else if (eventType === "push") {
-    console.log("Processing push event (commits to branch)");
-  } else {
-    console.log("Unhandled event type:", eventType);
+  switch (eventType) {
+    case "create":
+      console.log("Processing branch creation event (In Progress)");
+      break;
+    case "delete":
+      console.log("Processing branch/tag deletion event");
+      break;
+    case "pull_request":
+      console.log("Processing pull_request event (Review)");
+      break;
+    case "pull_request_review":
+      console.log("Processing pull_request_review event (approval check)");
+      break;
+    case "push":
+      console.log("Processing push event (commits to branch)");
+      break;
+    default:
+      console.log("Unhandled event type:", eventType);
   }
 
   try {
@@ -66,8 +60,5 @@ export default async function handler(event, context) {
     console.error("Error sending to Telegram:", err);
   }
 
-  return {
-    statusCode: 200,
-    body: "Event processed",
-  };
+  return new Response("Event processed", { status: 200 });
 }
