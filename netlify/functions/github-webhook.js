@@ -2,7 +2,11 @@ import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
 
 export default async function handler(event, context) {
+  console.log("Received event:", event);
+
+  // Проверка метода запроса
   if (event.httpMethod !== "POST") {
+    console.warn("Invalid HTTP method:", event.httpMethod);
     return new Response("Method not allowed", { status: 405 });
   }
 
@@ -12,23 +16,27 @@ export default async function handler(event, context) {
     event.headers["X-Hub-Signature-256"];
 
   if (!signatureHeader) {
+    console.error("Missing X-Hub-Signature-256 header");
     return new Response("Missing X-Hub-Signature-256 header", { status: 400 });
   }
 
   if (!verifySignature(event.body, SECRET, signatureHeader)) {
+    console.error("Invalid signature detected");
     return new Response("Invalid signature", { status: 401 });
   }
 
   let payload;
   try {
+    console.log("Raw event body:", event.body);
     payload = JSON.parse(event.body);
   } catch (error) {
+    console.error("JSON parsing error:", error.message);
     return new Response("Invalid JSON", { status: 400 });
   }
 
   const eventType =
     event.headers["x-github-event"] || event.headers["X-GitHub-Event"];
-  console.log(`Received event: ${eventType}`);
+  console.log(`Received GitHub event: ${eventType}`);
 
   switch (eventType) {
     case "create":
