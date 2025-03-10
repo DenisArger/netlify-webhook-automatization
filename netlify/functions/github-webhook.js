@@ -95,6 +95,10 @@ export default async function handler(event, context) {
     );
   } catch (err) {
     console.error("Error sending to Telegram:", err);
+    return {
+      statusCode: 500,
+      body: "Error sending Telegram message",
+    };
   }
 
   return {
