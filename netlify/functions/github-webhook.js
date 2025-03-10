@@ -3,7 +3,10 @@ import { verifySignature } from "../../utils.js";
 
 export default async function handler(event, context) {
   if (event.httpMethod !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return {
+      statusCode: 405,
+      body: "Method not allowed",
+    };
   }
 
   const SECRET = process.env.WEBHOOK_SECRET;
@@ -12,18 +15,27 @@ export default async function handler(event, context) {
     event.headers["X-Hub-Signature-256"];
 
   if (!signatureHeader) {
-    return new Response("Missing X-Hub-Signature-256 header", { status: 400 });
+    return {
+      statusCode: 400,
+      body: "Missing X-Hub-Signature-256 header",
+    };
   }
 
   if (!verifySignature(event.body, SECRET, signatureHeader)) {
-    return new Response("Invalid signature", { status: 401 });
+    return {
+      statusCode: 401,
+      body: "Invalid signature",
+    };
   }
 
   let payload;
   try {
     payload = JSON.parse(event.body);
   } catch (error) {
-    return new Response("Invalid JSON", { status: 400 });
+    return {
+      statusCode: 400,
+      body: "Invalid JSON",
+    };
   }
 
   const eventType =
@@ -52,11 +64,10 @@ export default async function handler(event, context) {
     );
   } catch (err) {
     console.error("Error sending to Telegram:", err);
-    return new Response("Error sending Telegram message", { status: 500 });
   }
 
-  return new Response(JSON.stringify({ message: "Event processed" }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  return {
+    statusCode: 200,
+    body: "Event processed",
+  };
 }
