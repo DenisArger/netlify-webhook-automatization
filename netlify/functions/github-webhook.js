@@ -44,9 +44,6 @@ export default async function handler(event, context) {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  const eventType = headers["x-github-event"];
-  console.log(`Received GitHub event: ${eventType}`);
-
   switch (eventType) {
     case "create":
       console.log("Processing branch creation event (In Progress)");
