@@ -12,8 +12,8 @@ export default async function handler(event, context) {
 
   const SECRET = process.env.WEBHOOK_SECRET;
   const signatureHeader =
-    event.headers["x-hub-signature-256"] ||
-    event.headers["X-Hub-Signature-256"];
+    event.headers.Headers["x-hub-signature-256"] ||
+    event.headers.Headers["X-Hub-Signature-256"];
 
   if (!signatureHeader) {
     console.error("Missing X-Hub-Signature-256 header");
