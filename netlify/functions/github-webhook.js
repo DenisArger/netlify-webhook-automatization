@@ -4,6 +4,7 @@ import { verifySignature } from "../../utils.js";
 import("../../logger.js");
 
 export default async function handler(event, context) {
+  // Обработка HTTP-метода, разрешаем только POST
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -101,8 +102,10 @@ export default async function handler(event, context) {
     };
   }
 
-  return {
-    statusCode: 200,
-    body: "Event processed",
-  };
+  return new Response(
+    JSON.stringify({
+      statusCode: 200,
+      body: "Event processed",
+    })
+  );
 }
