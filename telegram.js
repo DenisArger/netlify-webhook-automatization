@@ -5,7 +5,7 @@ async function sendTelegramMessage(text) {
 
   if (!token || !chatId) {
     throw new Error(
-      "Отсутствуют TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID в переменных окружения"
+      "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in environment variables"
     );
   }
 
@@ -28,7 +28,7 @@ async function sendTelegramMessage(text) {
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Не удалось отправить сообщение в Telegram: ${errorBody}`);
+    throw new Error(`Failed to send message to Telegram: ${errorBody}`);
   }
 }
 
