@@ -52,6 +52,7 @@ async function fetchProjectItems(projectId, token) {
     }
 
     const data = JSON.parse(responseText);
+    console.log("❌ Ошибки GraphQL API:", data);
     if (data.errors) {
       console.error(
         "❌ Ошибки GraphQL API:",
