@@ -4,16 +4,22 @@ import { verifySignature } from "../../utils.js";
 export default async function handler(event, context) {
   console.log("Received event:", event);
 
-  // Проверка метода запроса
   if (event.method !== "POST") {
     console.warn("Invalid HTTP method:", event.httpMethod);
     return new Response("Method not allowed", { status: 405 });
   }
 
   const SECRET = process.env.WEBHOOK_SECRET;
-  const signatureHeader =
-    event.headers.Headers["x-hub-signature-256"] ||
-    event.headers.Headers["X-Hub-Signature-256"];
+
+  // Нормализация заголовков
+  const headers = Object.keys(event.headers).reduce((acc, key) => {
+    acc[key.toLowerCase()] = event.headers[key];
+    return acc;
+  }, {});
+
+  console.log("Received headers:", headers);
+
+  const signatureHeader = headers["x-hub-signature-256"];
 
   if (!signatureHeader) {
     console.error("Missing X-Hub-Signature-256 header");
@@ -34,8 +40,7 @@ export default async function handler(event, context) {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  const eventType =
-    event.headers["x-github-event"] || event.headers["X-GitHub-Event"];
+  const eventType = headers["x-github-event"];
   console.log(`Received GitHub event: ${eventType}`);
 
   switch (eventType) {
