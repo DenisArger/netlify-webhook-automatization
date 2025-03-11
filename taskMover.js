@@ -159,7 +159,7 @@ async function moveTaskToInProgress(issueNumber) {
     console.log(`⚠️ Задача #${issueNumber} уже в IN_PROGRESS.\n🔗 ${issueUrl}`);
     return { issueUrl, alreadyInProgress: true };
   }
-
+  console.log(162);
   // Обновляем статус
   const success = await updateIssueStatus(
     issueItem.id,
@@ -168,6 +168,7 @@ async function moveTaskToInProgress(issueNumber) {
     inProgressOptionId,
     token
   );
+  console.log(success, 171);
   if (!success) {
     throw new Error(`❌ Ошибка при обновлении статуса задачи #${issueNumber}.`);
   }
