@@ -42,7 +42,6 @@ async function fetchProjectItems(projectId, token) {
       throw new Error(`Ошибка запроса: ${response.status}`);
     }
     const data = JSON.parse(responseText);
-    console.log(data, 45);
 
     if (data.errors) {
       console.error(
@@ -62,15 +61,8 @@ async function fetchProjectItems(projectId, token) {
 /**
  * Ищет элемент задачи по номеру.
  */
-async function getIssueItemByNumber(
-  issueNumber,
-
-  projectId,
-  columnFieldId,
-  token
-) {
+async function getIssueItemByNumber(issueNumber, projectId, token) {
   const items = await fetchProjectItems(projectId, token);
-  console.log(items, 73);
   return (
     items.find((item) => item?.content?.number === Number(issueNumber)) || null
   );
@@ -86,15 +78,6 @@ async function updateIssueStatus(
   inProgressOptionId,
   token
 ) {
-  console.log(
-    issueId,
-    projectId,
-    columnFieldId,
-    inProgressOptionId,
-    token,
-    90000
-  );
-
   const graphqlUrl = "https://api.github.com/graphql";
   const mutation = `
     mutation {
@@ -118,7 +101,6 @@ async function updateIssueStatus(
     });
 
     const data = await response.json();
-    console.log(data, 111);
     if (data.errors) {
       console.error(
         "❌ Ошибка обновления задачи:",
@@ -147,28 +129,13 @@ async function moveTaskToInProgress(issueNumber) {
     throw new Error("❌ Отсутствуют необходимые переменные окружения.");
   }
 
-  const issueItem = await getIssueItemByNumber(
-    issueNumber,
-    projectId,
-    columnFieldId,
-    token
-  );
-  console.log(issueItem, 147);
+  const issueItem = await getIssueItemByNumber(issueNumber, projectId, token);
   if (!issueItem) {
     throw new Error(`❌ Задача #${issueNumber} не найдена.`);
   }
 
   const issueUrl = issueItem?.content?.url || "нет ссылки";
 
-  // Проверяем текущий статус задачи
-  // const statusField = issueItem.fieldValues.nodes.find(
-  //   (f) => f.field.id === columnFieldId
-  // );
-  // if (statusField?.optionId === inProgressOptionId) {
-  //   console.log(`⚠️ Задача #${issueNumber} уже в IN_PROGRESS.\n🔗 ${issueUrl}`);
-  //   return { issueUrl, alreadyInProgress: true };
-  // }
-  console.log(162);
   // Обновляем статус
   const success = await updateIssueStatus(
     issueItem.id,
@@ -177,7 +144,6 @@ async function moveTaskToInProgress(issueNumber) {
     inProgressOptionId,
     token
   );
-  console.log(success, 171);
   if (!success) {
     throw new Error(`❌ Ошибка при обновлении статуса задачи #${issueNumber}.`);
   }

@@ -11,8 +11,6 @@ async function streamToString(stream) {
 }
 
 export default async function handler(event, context) {
-  console.log("Received event:", event);
-
   if (event.method !== "POST") {
     console.warn("Invalid HTTP method:", event.httpMethod);
     return new Response("Method not allowed", { status: 405 });
@@ -67,8 +65,6 @@ export default async function handler(event, context) {
             const statusMessage = result.alreadyInProgress
               ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
               : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
-
-            console.log(statusMessage, 71);
 
             await sendTelegramMessage(
               `🔔 GitHub Webhook: ${eventType}\n` +
