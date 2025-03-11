@@ -41,8 +41,9 @@ async function fetchProjectItems(projectId, token) {
       console.error(`❌ Ошибка запроса: ${response.status}`, responseText);
       throw new Error(`Ошибка запроса: ${response.status}`);
     }
-
     const data = JSON.parse(responseText);
+    console.log(data, 45);
+
     if (data.errors) {
       console.error(
         "❌ Ошибки GraphQL API:",
@@ -69,6 +70,7 @@ async function getIssueItemByNumber(
   token
 ) {
   const items = await fetchProjectItems(projectId, token);
+  console.log(items, 73);
   return (
     items.find((item) => item?.content?.number === Number(issueNumber)) || null
   );
@@ -107,6 +109,7 @@ async function updateIssueStatus(
     });
 
     const data = await response.json();
+    console.log(data, 111);
     if (data.errors) {
       console.error(
         "❌ Ошибка обновления задачи:",
@@ -141,6 +144,7 @@ async function moveTaskToInProgress(issueNumber) {
     columnFieldId,
     token
   );
+  console.log(issueItem, 147);
   if (!issueItem) {
     throw new Error(`❌ Задача #${issueNumber} не найдена.`);
   }
