@@ -44,49 +44,52 @@ export default async function handler(event, context) {
   }
 
   const eventType = event.headers.get("x-github-event");
+  let issueNumber = null;
+
+  if (payload.ref_type === "branch") {
+    const branchName = payload.ref;
+    const branchRegex = /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i;
+    const match = branchName.match(branchRegex);
+
+    if (match) {
+      issueNumber = match[2];
+      console.log(
+        `Extracted issue number ${issueNumber} from branch ${branchName}`
+      );
+    } else {
+      console.log(
+        `⚠️ Branch name "${branchName}" does not correspond to the expected pattern.`
+      );
+    }
+  }
 
   switch (eventType) {
     case "create":
       console.log("Processing branch creation event (In Progress)");
 
-      if (payload.ref_type === "branch") {
-        const branchName = payload.ref;
+      if (issueNumber) {
+        try {
+          const result = await moveTaskToInProgress(issueNumber);
+          const statusMessage = result.alreadyInProgress
+            ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
+            : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
 
-        const branchRegex = /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i;
-        const match = branchName.match(branchRegex);
-
-        if (match) {
-          const issueNumber = match[2];
-          console.log(
-            `Extracted issue number ${issueNumber} from branch ${branchName}`
+          await sendTelegramMessage(
+            `🔔 GitHub Webhook: ${eventType}\n` +
+              `📂 Репозиторий: ${
+                payload?.repository?.full_name || "unknown"
+              }\n` +
+              `🔢 Номер задачи: ${issueNumber}\n` +
+              `🔗 Ссылка: ${result.issueUrl || "нет данных"}\n` +
+              `${statusMessage}`
           );
-          try {
-            const result = await moveTaskToInProgress(issueNumber);
-            const statusMessage = result.alreadyInProgress
-              ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
-              : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
-
-            await sendTelegramMessage(
-              `🔔 GitHub Webhook: ${eventType}\n` +
-                `📂 Репозиторий: ${
-                  payload?.repository?.full_name || "unknown"
-                }\n` +
-                `🔢 Номер задачи: ${issueNumber}\n` +
-                `🔗 Ссылка: ${result.issueUrl || "нет данных"}\n` +
-                `${statusMessage}`
-            );
-          } catch (err) {
-            console.error(
-              `❌ Ошибка при перемещении задачи ${issueNumber} в IN_PROGRESS:`,
-              err
-            );
-            await sendTelegramMessage(
-              `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
-            );
-          }
-        } else {
-          console.log(
-            `⚠️ Branch name "${branchName}" does not correspond to the expected pattern.`
+        } catch (err) {
+          console.error(
+            `❌ Ошибка при перемещении задачи ${issueNumber} в IN_PROGRESS:`,
+            err
+          );
+          await sendTelegramMessage(
+            `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
           );
         }
       }
