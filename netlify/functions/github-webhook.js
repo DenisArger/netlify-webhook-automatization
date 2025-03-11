@@ -1,4 +1,8 @@
-import { moveTaskToInProgress, moveTaskToInReview } from "../../taskMover.js";
+import {
+  moveTaskToInProgress,
+  moveTaskToInReview,
+  moveTaskToInDone,
+} from "../../taskMover.js";
 import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
 
@@ -17,8 +21,8 @@ export default async function handler(event, context) {
   }
 
   const SECRET = process.env.WEBHOOK_SECRET;
-
   const signatureHeader = event.headers.get("x-hub-signature-256");
+
   if (!signatureHeader) {
     console.error("Missing X-Hub-Signature-256 header");
     return new Response("Missing X-Hub-Signature-256 header", { status: 400 });
@@ -48,8 +52,7 @@ export default async function handler(event, context) {
 
   if (payload.ref_type === "branch") {
     const branchName = payload.ref;
-    const branchRegex = /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i;
-    const match = branchName.match(branchRegex);
+    const match = branchName.match(/^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i);
 
     if (match) {
       issueNumber = match[2];
@@ -57,9 +60,7 @@ export default async function handler(event, context) {
         `Extracted issue number ${issueNumber} from branch ${branchName}`
       );
     } else {
-      console.log(
-        `⚠️ Branch name "${branchName}" does not correspond to the expected pattern.`
-      );
+      console.log(`⚠️ Branch name "${branchName}" does not match the pattern.`);
     }
   }
 
@@ -96,9 +97,9 @@ export default async function handler(event, context) {
       break;
 
     case "pull_request":
-      console.log("Processing pull_request event (Review)");
-
       if (payload.action === "opened") {
+        console.log("Processing pull_request event (Review)");
+
         const prBranchName = payload.pull_request.head.ref;
         const match = prBranchName.match(
           /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i
@@ -138,18 +139,59 @@ export default async function handler(event, context) {
           );
         }
       }
+
+      if (payload.action === "closed") {
+        console.log("Processing pull_request closed event (Done)");
+
+        const prBranchName = payload.pull_request.head.ref;
+        const match = prBranchName.match(
+          /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i
+        );
+
+        if (match) {
+          issueNumber = match[2];
+          console.log(
+            `Extracted issue number ${issueNumber} from PR branch ${prBranchName} (Closed)`
+          );
+
+          try {
+            const result = await moveTaskToInDone(issueNumber);
+            const statusMessage = result.alreadyDone
+              ? `⚠️ Задача ${issueNumber} уже в статусе DONE.`
+              : `✅ Задача ${issueNumber} успешно перемещена в DONE.`;
+
+            await sendTelegramMessage(
+              `🔔 GitHub Webhook: ${eventType} (PR Closed)\n` +
+                `📂 Репозиторий: ${payload.repository.full_name}\n` +
+                `🔢 Номер задачи: ${issueNumber}\n` +
+                `🔗 PR: ${payload.pull_request.html_url}\n` +
+                `${statusMessage}`
+            );
+          } catch (err) {
+            console.error(
+              `❌ Ошибка при перемещении задачи ${issueNumber} в DONE:`,
+              err
+            );
+            await sendTelegramMessage(
+              `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
+            );
+          }
+        } else {
+          console.log(
+            `⚠️ PR branch name "${prBranchName}" не соответствует ожидаемому шаблону.`
+          );
+        }
+      }
       break;
 
     case "delete":
       console.log("Processing branch/tag deletion event");
       break;
 
-    case "pull_request_review":
-      console.log("Processing pull_request_review event (approval check)");
-      break;
     case "push":
       console.log("Processing push event (commits to branch)");
       break;
+
     default:
       console.log("Unhandled event type:", eventType);
   }
