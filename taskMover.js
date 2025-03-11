@@ -161,13 +161,13 @@ async function moveTaskToInProgress(issueNumber) {
   const issueUrl = issueItem?.content?.url || "нет ссылки";
 
   // Проверяем текущий статус задачи
-  const statusField = issueItem.fieldValues.nodes.find(
-    (f) => f.field.id === columnFieldId
-  );
-  if (statusField?.optionId === inProgressOptionId) {
-    console.log(`⚠️ Задача #${issueNumber} уже в IN_PROGRESS.\n🔗 ${issueUrl}`);
-    return { issueUrl, alreadyInProgress: true };
-  }
+  // const statusField = issueItem.fieldValues.nodes.find(
+  //   (f) => f.field.id === columnFieldId
+  // );
+  // if (statusField?.optionId === inProgressOptionId) {
+  //   console.log(`⚠️ Задача #${issueNumber} уже в IN_PROGRESS.\n🔗 ${issueUrl}`);
+  //   return { issueUrl, alreadyInProgress: true };
+  // }
   console.log(162);
   // Обновляем статус
   const success = await updateIssueStatus(
