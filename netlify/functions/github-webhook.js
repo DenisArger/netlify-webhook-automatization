@@ -1,4 +1,4 @@
-import { moveTaskToInProgress } from "../../taskMover.js";
+import { moveTaskToInProgress, moveTaskToInReview } from "../../taskMover.js";
 import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
 
@@ -94,12 +94,56 @@ export default async function handler(event, context) {
         }
       }
       break;
+
+    case "pull_request":
+      console.log("Processing pull_request event (Review)");
+
+      if (payload.action === "opened") {
+        const prBranchName = payload.pull_request.head.ref;
+        const match = prBranchName.match(
+          /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i
+        );
+
+        if (match) {
+          issueNumber = match[2];
+          console.log(
+            `Extracted issue number ${issueNumber} from PR branch ${prBranchName}`
+          );
+
+          try {
+            const result = await moveTaskToInReview(issueNumber);
+            const statusMessage = result.alreadyInReview
+              ? `⚠️ Задача ${issueNumber} уже в статусе IN_REVIEW.`
+              : `✅ Задача ${issueNumber} успешно перемещена в IN_REVIEW.`;
+
+            await sendTelegramMessage(
+              `🔔 GitHub Webhook: ${eventType} (Pull Request Opened)\n` +
+                `📂 Репозиторий: ${payload.repository.full_name}\n` +
+                `🔢 Номер задачи: ${issueNumber}\n` +
+                `🔗 PR: ${payload.pull_request.html_url}\n` +
+                `${statusMessage}`
+            );
+          } catch (err) {
+            console.error(
+              `❌ Ошибка при перемещении задачи ${issueNumber} в IN_REVIEW:`,
+              err
+            );
+            await sendTelegramMessage(
+              `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
+            );
+          }
+        } else {
+          console.log(
+            `⚠️ PR branch name "${prBranchName}" не соответствует ожидаемому шаблону.`
+          );
+        }
+      }
+      break;
+
     case "delete":
       console.log("Processing branch/tag deletion event");
       break;
-    case "pull_request":
-      console.log("Processing pull_request event (Review)");
-      break;
+
     case "pull_request_review":
       console.log("Processing pull_request_review event (approval check)");
       break;

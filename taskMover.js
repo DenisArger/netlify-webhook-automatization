@@ -155,3 +155,92 @@ async function moveTaskToInProgress(issueNumber) {
 }
 
 export { moveTaskToInProgress };
+
+const GITHUB_API_URL = "https://api.github.com/graphql";
+const TOKEN = process.env.TOKEN_AUTOMATIZATION;
+const PROJECT_ID = process.env.ID_PROJECT_SKILLDOR;
+const STATUS_FIELD_ID = process.env.ID_COLUMN_STATUS_SKILLDOR;
+const REVIEW_STATUS_ID = process.env.ID_COLUMN_STATUS_REVIEW_SKILLDOR;
+
+export async function moveTaskToInReview(issueNumber) {
+  if (!issueNumber) {
+    throw new Error("Issue number is required.");
+  }
+
+  const query = {
+    query: `query {
+      node(id: "${PROJECT_ID}") {
+        ... on ProjectV2 {
+          items(first: 100) {
+            nodes {
+              id
+              content {
+                ... on Issue {
+                  number
+                  url
+                }
+              }
+            }
+          }
+        }
+      }
+    }`,
+  };
+
+  const response = await fetch(GITHUB_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(query),
+  });
+
+  const data = await response.json();
+  if (data.errors) {
+    console.error("GitHub API Error:", data.errors);
+    throw new Error("Failed to fetch project tasks.");
+  }
+
+  const issueItem = data.data.node.items.nodes.find(
+    (item) => item.content?.number == issueNumber
+  );
+
+  if (!issueItem) {
+    throw new Error(`Issue #${issueNumber} not found in the project.`);
+  }
+
+  const issueItemId = issueItem.id;
+  const issueUrl = issueItem.content.url;
+
+  const mutation = {
+    query: `mutation {
+      updateProjectV2ItemFieldValue(input: {
+        projectId: "${PROJECT_ID}",
+        itemId: "${issueItemId}",
+        fieldId: "${STATUS_FIELD_ID}",
+        value: { singleSelectOptionId: "${REVIEW_STATUS_ID}" }
+      }) {
+        clientMutationId
+      }
+    }`,
+  };
+
+  const mutationResponse = await fetch(GITHUB_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(mutation),
+  });
+
+  const mutationData = await mutationResponse.json();
+  if (mutationData.errors) {
+    console.error("GitHub API Mutation Error:", mutationData.errors);
+    throw new Error("Failed to update issue status to REVIEW.");
+  }
+
+  console.log(`✅ Issue #${issueNumber} moved to REVIEW.`);
+  return { issueNumber, issueUrl };
+}
