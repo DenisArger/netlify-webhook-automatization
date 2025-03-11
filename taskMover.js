@@ -86,6 +86,15 @@ async function updateIssueStatus(
   inProgressOptionId,
   token
 ) {
+  console.log(
+    issueId,
+    projectId,
+    columnFieldId,
+    inProgressOptionId,
+    token,
+    90000
+  );
+
   const graphqlUrl = "https://api.github.com/graphql";
   const mutation = `
     mutation {

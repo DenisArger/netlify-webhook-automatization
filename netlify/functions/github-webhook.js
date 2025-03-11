@@ -68,7 +68,7 @@ export default async function handler(event, context) {
               ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
               : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
 
-            console.log(statusMessage);
+            console.log(statusMessage, 71);
 
             await sendTelegramMessage(
               `🔔 GitHub Webhook: ${eventType}\n` +
