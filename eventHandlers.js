@@ -11,7 +11,7 @@ export async function handleCreateEvent(payload) {
   const issueNumber = extractIssueNumber(branchName);
   if (!issueNumber) {
     console.warn(
-      `⚠️ Branch name "${branchName}" не соответствует ожидаемому шаблону.`
+      `⚠️ Branch name "${branchName}" does not match the expected pattern.`
     );
     return;
   }
@@ -19,22 +19,19 @@ export async function handleCreateEvent(payload) {
   try {
     const result = await moveTaskToInProgress(issueNumber);
     const statusMessage = result.alreadyInProgress
-      ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
-      : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
+      ? `⚠️ Issue ${issueNumber} is already in IN_PROGRESS status.`
+      : `✅ Issue ${issueNumber} successfully moved to IN_PROGRESS.`;
     await sendTelegramMessage(
       `🔔 GitHub Webhook: create\n` +
-        `📂 Репозиторий: ${payload?.repository?.full_name || "unknown"}\n` +
-        `🔢 Номер задачи: ${issueNumber}\n` +
-        `🔗 Ссылка: ${result.issueUrl || "нет данных"}\n` +
+        `📂 Repository: ${payload?.repository?.full_name || "unknown"}\n` +
+        `🔢 Issue Number: ${issueNumber}\n` +
+        `🔗 Link: ${result.issueUrl || "no data"}\n` +
         statusMessage
     );
   } catch (err) {
-    console.error(
-      `❌ Ошибка при перемещении задачи ${issueNumber} в IN_PROGRESS:`,
-      err
-    );
+    console.error(`❌ Error moving issue ${issueNumber} to IN_PROGRESS:`, err);
     await sendTelegramMessage(
-      `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
+      `❌ Error updating issue ${issueNumber}: ${err.message}`
     );
   }
 }
@@ -44,7 +41,7 @@ export async function handlePullRequestEvent(payload) {
   const issueNumber = extractIssueNumber(prBranchName);
   if (!issueNumber) {
     console.warn(
-      `⚠️ PR branch name "${prBranchName}" не соответствует ожидаемому шаблону.`
+      `⚠️ PR branch name "${prBranchName}" does not match the expected pattern.`
     );
     return;
   }
@@ -53,22 +50,19 @@ export async function handlePullRequestEvent(payload) {
     try {
       const result = await moveTaskToInReview(issueNumber);
       const statusMessage = result.alreadyInReview
-        ? `⚠️ Задача ${issueNumber} уже в статусе IN_REVIEW.`
-        : `✅ Задача ${issueNumber} успешно перемещена в IN_REVIEW.`;
+        ? `⚠️ Issue ${issueNumber} is already in IN_REVIEW status.`
+        : `✅ Issue ${issueNumber} successfully moved to IN_REVIEW.`;
       await sendTelegramMessage(
         `🔔 GitHub Webhook: pull_request (opened)\n` +
-          `📂 Репозиторий: ${payload.repository.full_name}\n` +
-          `🔢 Номер задачи: ${issueNumber}\n` +
+          `📂 Repository: ${payload.repository.full_name}\n` +
+          `🔢 Issue Number: ${issueNumber}\n` +
           `🔗 PR: ${payload.pull_request.html_url}\n` +
           statusMessage
       );
     } catch (err) {
-      console.error(
-        `❌ Ошибка при перемещении задачи ${issueNumber} в IN_REVIEW:`,
-        err
-      );
+      console.error(`❌ Error moving issue ${issueNumber} to IN_REVIEW:`, err);
       await sendTelegramMessage(
-        `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
+        `❌ Error updating issue ${issueNumber}: ${err.message}`
       );
     }
   }
@@ -77,22 +71,19 @@ export async function handlePullRequestEvent(payload) {
     try {
       const result = await moveTaskToDone(issueNumber);
       const statusMessage = result.alreadyDone
-        ? `⚠️ Задача ${issueNumber} уже в статусе DONE.`
-        : `✅ Задача ${issueNumber} успешно перемещена в DONE.`;
+        ? `⚠️ Issue ${issueNumber} is already in DONE status.`
+        : `✅ Issue ${issueNumber} successfully moved to DONE.`;
       await sendTelegramMessage(
         `🔔 GitHub Webhook: pull_request (closed)\n` +
-          `📂 Репозиторий: ${payload.repository.full_name}\n` +
-          `🔢 Номер задачи: ${issueNumber}\n` +
+          `📂 Repository: ${payload.repository.full_name}\n` +
+          `🔢 Issue Number: ${issueNumber}\n` +
           `🔗 PR: ${payload.pull_request.html_url}\n` +
           statusMessage
       );
     } catch (err) {
-      console.error(
-        `❌ Ошибка при перемещении задачи ${issueNumber} в DONE:`,
-        err
-      );
+      console.error(`❌ Error moving issue ${issueNumber} to DONE:`, err);
       await sendTelegramMessage(
-        `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
+        `❌ Error updating issue ${issueNumber}: ${err.message}`
       );
     }
   }

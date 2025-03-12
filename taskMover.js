@@ -16,7 +16,7 @@ if (
   !STATUS_FIELD_ID ||
   Object.values(STATUS_OPTIONS).includes(undefined)
 ) {
-  throw new Error("❌ Отсутствуют необходимые переменные окружения.");
+  throw new Error("❌ Required environment variables are missing.");
 }
 
 async function githubRequest(query) {
@@ -33,15 +33,15 @@ async function githubRequest(query) {
     const data = await response.json();
     if (data.errors) {
       console.error(
-        "❌ Ошибка GitHub API:",
+        "❌ GitHub API error:",
         JSON.stringify(data.errors, null, 2)
       );
-      throw new Error("Ошибка GitHub API");
+      throw new Error("GitHub API error");
     }
 
     return data.data;
   } catch (error) {
-    console.error("❌ Ошибка при выполнении запроса:", error);
+    console.error("❌ Error executing request:", error);
     throw error;
   }
 }
@@ -92,7 +92,7 @@ async function updateIssueStatus(issueId, statusOptionId) {
 async function moveTaskToStatus(issueNumber, statusKey) {
   const issueItem = await getIssueItemByNumber(issueNumber);
   if (!issueItem) {
-    throw new Error(`❌ Задача #${issueNumber} не найдена.`);
+    throw new Error(`❌ Issue #${issueNumber} not found.`);
   }
 
   await updateIssueStatus(issueItem.id, STATUS_OPTIONS[statusKey]);
