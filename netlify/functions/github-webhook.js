@@ -38,7 +38,6 @@ export default async function handler(event, context) {
 
   let payload;
   try {
-    console.log("Raw event body:", bodyString);
     payload = JSON.parse(bodyString);
   } catch (error) {
     console.error("JSON parsing error:", error.message);
@@ -49,7 +48,6 @@ export default async function handler(event, context) {
 
   switch (eventType) {
     case "create":
-      console.log("Processing branch creation event (In Progress)");
       await handleCreateEvent(payload);
       break;
     case "pull_request":

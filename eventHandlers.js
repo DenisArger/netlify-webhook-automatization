@@ -10,7 +10,7 @@ export async function handleCreateEvent(payload) {
   const branchName = payload.ref;
   const issueNumber = extractIssueNumber(branchName);
   if (!issueNumber) {
-    console.log(
+    console.warn(
       `⚠️ Branch name "${branchName}" не соответствует ожидаемому шаблону.`
     );
     return;
@@ -43,7 +43,7 @@ export async function handlePullRequestEvent(payload) {
   const prBranchName = payload.pull_request.head.ref;
   const issueNumber = extractIssueNumber(prBranchName);
   if (!issueNumber) {
-    console.log(
+    console.warn(
       `⚠️ PR branch name "${prBranchName}" не соответствует ожидаемому шаблону.`
     );
     return;

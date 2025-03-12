@@ -1,22 +1,15 @@
 import { sendTelegramMessage } from "./telegram";
 
-// Оригинальные методы консоли
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
-/**
- * Форматирует аргументы в читаемый вид.
- *
- * @param {Array} args - Массив аргументов.
- * @returns {string} - Форматированная строка.
- */
 function formatMessage(args) {
   return args
     .map((arg) => {
       if (typeof arg === "object") {
         try {
-          return JSON.stringify(arg, null, 2); // Форматируем JSON с отступами
+          return JSON.stringify(arg, null, 2);
         } catch (e) {
           return "[Unserializable Object]";
         }
@@ -26,19 +19,12 @@ function formatMessage(args) {
     .join(" ");
 }
 
-/**
- * Логирование с отправкой в Telegram.
- *
- * @param {"log" | "error" | "warn"} type - Тип лога.
- * @param {Array} args - Аргументы.
- */
 function logToTelegram(type, args) {
   const timestamp = new Date().toISOString();
   const formattedMessage = `[${type.toUpperCase()}] ${timestamp}\n${formatMessage(
     args
   )}`;
 
-  // Обрезаем сообщение, если оно слишком длинное для Telegram
   const maxLength = 4000;
   const message =
     formattedMessage.length > maxLength
@@ -50,19 +36,16 @@ function logToTelegram(type, args) {
   });
 }
 
-// Переопределяем console.log
 console.log = function (...args) {
   originalConsoleLog.apply(console, args);
   logToTelegram("log", args);
 };
 
-// Переопределяем console.error
 console.error = function (...args) {
   originalConsoleError.apply(console, args);
   logToTelegram("error", args);
 };
 
-// Переопределяем console.warn
 console.warn = function (...args) {
   originalConsoleWarn.apply(console, args);
   logToTelegram("warn", args);

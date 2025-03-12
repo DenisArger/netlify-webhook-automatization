@@ -19,9 +19,6 @@ if (
   throw new Error("❌ Отсутствуют необходимые переменные окружения.");
 }
 
-/**
- * Запрос к GitHub GraphQL API.
- */
 async function githubRequest(query) {
   try {
     const response = await fetch(GITHUB_API_URL, {
@@ -49,9 +46,6 @@ async function githubRequest(query) {
   }
 }
 
-/**
- * Получает список задач из проекта.
- */
 async function fetchProjectItems() {
   const query = `query {
     node(id: "${PROJECT_ID}") {
@@ -75,9 +69,6 @@ async function fetchProjectItems() {
   return data?.node?.items?.nodes || [];
 }
 
-/**
- * Ищет задачу по номеру.
- */
 async function getIssueItemByNumber(issueNumber) {
   const items = await fetchProjectItems();
   return (
@@ -85,9 +76,6 @@ async function getIssueItemByNumber(issueNumber) {
   );
 }
 
-/**
- * Обновляет статус задачи.
- */
 async function updateIssueStatus(issueId, statusOptionId) {
   const mutation = `mutation {
     updateProjectV2ItemFieldValue(input: {
@@ -101,9 +89,6 @@ async function updateIssueStatus(issueId, statusOptionId) {
   await githubRequest(mutation);
 }
 
-/**
- * Перемещает задачу в указанный статус.
- */
 async function moveTaskToStatus(issueNumber, statusKey) {
   const issueItem = await getIssueItemByNumber(issueNumber);
   if (!issueItem) {
@@ -111,7 +96,6 @@ async function moveTaskToStatus(issueNumber, statusKey) {
   }
 
   await updateIssueStatus(issueItem.id, STATUS_OPTIONS[statusKey]);
-  console.log(`✅ Задача #${issueNumber} перемещена в ${statusKey}.`);
   return { issueNumber, issueUrl: issueItem.content.url };
 }
 

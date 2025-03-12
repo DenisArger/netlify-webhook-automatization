@@ -1,11 +1,3 @@
-import fetch from "node-fetch";
-
-/**
- * Отправляет сообщение в Telegram.
- *
- * @param {string} text - Текст сообщения.
- * @throws {Error} - Если не удается отправить сообщение.
- */
 async function sendTelegramMessage(text) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
