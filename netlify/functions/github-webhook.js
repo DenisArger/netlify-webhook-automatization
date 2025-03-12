@@ -5,6 +5,7 @@ import {
   handlePullRequestEvent,
 } from "../../eventHandlers.js";
 
+const DEBUG = process.env.DEBUG === "true";
 async function streamToString(stream) {
   const chunks = [];
   for await (const chunk of stream) {
@@ -62,15 +63,20 @@ export default async function handler(event, context) {
     default:
       console.log("Unhandled event type:", eventType);
   }
-
-  try {
-    await sendTelegramMessage(
-      `Received event: ${eventType}\n` +
-        `Repository: ${payload?.repository?.full_name || "unknown"}\n` +
-        `Additional data: ${JSON.stringify(payload, null, 2).slice(0, 500)}...`
-    );
-  } catch (err) {
-    console.error("Error sending to Telegram:", err);
+  if (DEBUG) {
+    try {
+      await sendTelegramMessage(
+        `Received event: ${eventType}\n` +
+          `Repository: ${payload?.repository?.full_name || "unknown"}\n` +
+          `Additional data: ${JSON.stringify(payload, null, 2).slice(
+            0,
+            500
+          )}...`,
+        DEBUG
+      );
+    } catch (err) {
+      console.error("Error sending to Telegram:", err);
+    }
   }
 
   return new Response("Event processed", { status: 200 });

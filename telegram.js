@@ -1,7 +1,17 @@
-async function sendTelegramMessage(text) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  const messageThreadId = process.env.TELEGRAM_TOPIC_ID;
+async function sendTelegramMessage(text, debug = false) {
+  let token = process.env.TELEGRAM_BOT_TOKEN;
+  let chatId = process.env.TELEGRAM_CHAT_ID;
+  let messageThreadId = process.env.TELEGRAM_TOPIC_ID;
+
+  if (!debug) {
+    token = process.env.TELEGRAM_BOT_TOKEN;
+    chatId = process.env.TELEGRAM_CHAT_ID;
+    messageThreadId = process.env.TELEGRAM_TOPIC_ID;
+  } else {
+    token = process.env.TELEGRAM_BOT_TOKEN_DEBUG;
+    chatId = process.env.TELEGRAM_CHAT_ID_DEBUG;
+    messageThreadId = process.env.TELEGRAM_TOPIC_ID_DEBUG;
+  }
 
   if (!token || !chatId) {
     throw new Error(
