@@ -2,12 +2,12 @@ import fetch from "node-fetch";
 
 const GITHUB_API_URL = "https://api.github.com/graphql";
 const TOKEN = process.env.TOKEN_AUTOMATIZATION;
-const PROJECT_ID = process.env.ID_PROJECT_SKILLDOR;
-const STATUS_FIELD_ID = process.env.ID_COLUMN_STATUS_SKILLDOR;
+const PROJECT_ID = process.env.ID_PROJECT;
+const STATUS_FIELD_ID = process.env.ID_COLUMN_STATUS;
 const STATUS_OPTIONS = {
-  IN_PROGRESS: process.env.ID_COLUMN_STATUS_IN_PROGRESS_SKILLDOR,
-  REVIEW: process.env.ID_COLUMN_STATUS_REVIEW_SKILLDOR,
-  DONE: process.env.ID_COLUMN_STATUS_DONE_SKILLDOR,
+  IN_PROGRESS: process.env.ID_COLUMN_STATUS_IN_PROGRESS,
+  REVIEW: process.env.ID_COLUMN_STATUS_REVIEW,
+  DONE: process.env.ID_COLUMN_STATUS_DONE,
 };
 
 if (
