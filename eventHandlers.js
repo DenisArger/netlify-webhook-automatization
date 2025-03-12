@@ -1,7 +1,7 @@
 import {
   moveTaskToInProgress,
   moveTaskToInReview,
-  moveTaskToInDone,
+  moveTaskToDone,
 } from "./taskMover.js";
 import { sendTelegramMessage } from "./telegram.js";
 import { extractIssueNumber } from "./utils.js";
@@ -75,7 +75,7 @@ export async function handlePullRequestEvent(payload) {
 
   if (payload.action === "closed") {
     try {
-      const result = await moveTaskToInDone(issueNumber);
+      const result = await moveTaskToDone(issueNumber);
       const statusMessage = result.alreadyDone
         ? `⚠️ Задача ${issueNumber} уже в статусе DONE.`
         : `✅ Задача ${issueNumber} успешно перемещена в DONE.`;
