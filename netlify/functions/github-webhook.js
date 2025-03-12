@@ -1,10 +1,9 @@
-import {
-  moveTaskToInProgress,
-  moveTaskToInReview,
-  moveTaskToInDone,
-} from "../../taskMover.js";
 import { sendTelegramMessage } from "../../telegram.js";
 import { verifySignature } from "../../utils.js";
+import {
+  handleCreateEvent,
+  handlePullRequestEvent,
+} from "../../eventHandlers.js";
 
 async function streamToString(stream) {
   const chunks = [];
@@ -16,13 +15,12 @@ async function streamToString(stream) {
 
 export default async function handler(event, context) {
   if (event.method !== "POST") {
-    console.warn("Invalid HTTP method:", event.httpMethod);
+    console.warn("Invalid HTTP method:", event.method);
     return new Response("Method not allowed", { status: 405 });
   }
 
   const SECRET = process.env.WEBHOOK_SECRET;
   const signatureHeader = event.headers.get("x-hub-signature-256");
-
   if (!signatureHeader) {
     console.error("Missing X-Hub-Signature-256 header");
     return new Response("Missing X-Hub-Signature-256 header", { status: 400 });
@@ -48,150 +46,21 @@ export default async function handler(event, context) {
   }
 
   const eventType = event.headers.get("x-github-event");
-  let issueNumber = null;
-
-  if (payload.ref_type === "branch") {
-    const branchName = payload.ref;
-    const match = branchName.match(/^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i);
-
-    if (match) {
-      issueNumber = match[2];
-      console.log(
-        `Extracted issue number ${issueNumber} from branch ${branchName}`
-      );
-    } else {
-      console.log(`⚠️ Branch name "${branchName}" does not match the pattern.`);
-    }
-  }
 
   switch (eventType) {
     case "create":
       console.log("Processing branch creation event (In Progress)");
-
-      if (issueNumber) {
-        try {
-          const result = await moveTaskToInProgress(issueNumber);
-          const statusMessage = result.alreadyInProgress
-            ? `⚠️ Задача ${issueNumber} уже в статусе IN_PROGRESS.`
-            : `✅ Задача ${issueNumber} успешно перемещена в IN_PROGRESS.`;
-
-          await sendTelegramMessage(
-            `🔔 GitHub Webhook: ${eventType}\n` +
-              `📂 Репозиторий: ${
-                payload?.repository?.full_name || "unknown"
-              }\n` +
-              `🔢 Номер задачи: ${issueNumber}\n` +
-              `🔗 Ссылка: ${result.issueUrl || "нет данных"}\n` +
-              `${statusMessage}`
-          );
-        } catch (err) {
-          console.error(
-            `❌ Ошибка при перемещении задачи ${issueNumber} в IN_PROGRESS:`,
-            err
-          );
-          await sendTelegramMessage(
-            `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
-          );
-        }
-      }
+      await handleCreateEvent(payload);
       break;
-
     case "pull_request":
-      if (payload.action === "opened") {
-        console.log("Processing pull_request event (Review)");
-
-        const prBranchName = payload.pull_request.head.ref;
-        const match = prBranchName.match(
-          /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i
-        );
-
-        if (match) {
-          issueNumber = match[2];
-          console.log(
-            `Extracted issue number ${issueNumber} from PR branch ${prBranchName}`
-          );
-
-          try {
-            const result = await moveTaskToInReview(issueNumber);
-            const statusMessage = result.alreadyInReview
-              ? `⚠️ Задача ${issueNumber} уже в статусе IN_REVIEW.`
-              : `✅ Задача ${issueNumber} успешно перемещена в IN_REVIEW.`;
-
-            await sendTelegramMessage(
-              `🔔 GitHub Webhook: ${eventType} (Pull Request Opened)\n` +
-                `📂 Репозиторий: ${payload.repository.full_name}\n` +
-                `🔢 Номер задачи: ${issueNumber}\n` +
-                `🔗 PR: ${payload.pull_request.html_url}\n` +
-                `${statusMessage}`
-            );
-          } catch (err) {
-            console.error(
-              `❌ Ошибка при перемещении задачи ${issueNumber} в IN_REVIEW:`,
-              err
-            );
-            await sendTelegramMessage(
-              `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
-            );
-          }
-        } else {
-          console.log(
-            `⚠️ PR branch name "${prBranchName}" не соответствует ожидаемому шаблону.`
-          );
-        }
-      }
-
-      if (payload.action === "closed") {
-        console.log("Processing pull_request closed event (Done)");
-
-        const prBranchName = payload.pull_request.head.ref;
-        const match = prBranchName.match(
-          /^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i
-        );
-
-        if (match) {
-          issueNumber = match[2];
-          console.log(
-            `Extracted issue number ${issueNumber} from PR branch ${prBranchName} (Closed)`
-          );
-
-          try {
-            const result = await moveTaskToInDone(issueNumber);
-            const statusMessage = result.alreadyDone
-              ? `⚠️ Задача ${issueNumber} уже в статусе DONE.`
-              : `✅ Задача ${issueNumber} успешно перемещена в DONE.`;
-
-            await sendTelegramMessage(
-              `🔔 GitHub Webhook: ${eventType} (PR Closed)\n` +
-                `📂 Репозиторий: ${payload.repository.full_name}\n` +
-                `🔢 Номер задачи: ${issueNumber}\n` +
-                `🔗 PR: ${payload.pull_request.html_url}\n` +
-                `${statusMessage}`
-            );
-          } catch (err) {
-            console.error(
-              `❌ Ошибка при перемещении задачи ${issueNumber} в DONE:`,
-              err
-            );
-            await sendTelegramMessage(
-              `❌ Ошибка при обновлении задачи ${issueNumber}: ${err.message}`
-            );
-          }
-        } else {
-          console.log(
-            `⚠️ PR branch name "${prBranchName}" не соответствует ожидаемому шаблону.`
-          );
-        }
-      }
+      await handlePullRequestEvent(payload);
       break;
-
     case "delete":
       console.log("Processing branch/tag deletion event");
       break;
-
     case "push":
       console.log("Processing push event (commits to branch)");
       break;
-
     default:
       console.log("Unhandled event type:", eventType);
   }
