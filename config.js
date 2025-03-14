@@ -1,6 +1,8 @@
 export const githubToTelegramMap = {
   denisarger03: "@Denis_Arger",
-  DenisArger: "@DenisArger",
-  "john-doe": "@john_doe_tg",
-  "jane-smith": "@jane_smith_tg",
+  DenisArger: "@Denis_Arger",
+  Valyukhov: "@azedval",
+  Pavel064: "@Braurs64",
+  "Vitalii-250885": "@pva_alex",
+  foxprogs: "@foxprogs",
 };

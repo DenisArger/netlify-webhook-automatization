@@ -134,4 +134,26 @@ export async function handlePullRequestEvent(payload) {
         `🔗 PR: ${payload.pull_request.html_url}`
     );
   }
+
+  if (payload.action === "assigned") {
+    await sendTelegramMessage(
+      `🔔 GitHub Webhook: assignee_added\n` +
+        `📂 Repository: ${repoFullName}\n` +
+        `🔢 Issue Number: ${issueNumber}\n` +
+        `👥 Assignees: ${assigneesList}\n` +
+        `👀 Reviewer: ${requestedReviewer}\n` +
+        `🔗 PR: ${payload.pull_request.html_url}`
+    );
+  }
+
+  if (payload.action === "unassigned") {
+    await sendTelegramMessage(
+      `🔔 GitHub Webhook: assignee_removed\n` +
+        `📂 Repository: ${repoFullName}\n` +
+        `🔢 Issue Number: ${issueNumber}\n` +
+        `👥 Assignees: ${assigneesList}\n` +
+        `👀 Reviewer: ${requestedReviewer}\n` +
+        `🔗 PR: ${payload.pull_request.html_url}`
+    );
+  }
 }
