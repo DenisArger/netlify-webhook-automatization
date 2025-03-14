@@ -55,6 +55,11 @@ export async function handlePullRequestEvent(payload) {
   const repoFullName = payload.repository.full_name;
   const assignee = await getIssueAssignee(repoFullName, issueNumber);
 
+  const assigneesArray = payload.pull_request.assignees || [];
+  const assigneesList = assigneesArray.length
+    ? assigneesArray.map((user) => user.login).join(", ")
+    : "None";
+
   if (payload.action === "opened") {
     try {
       const result = await moveTaskToInReview(issueNumber);
@@ -109,6 +114,7 @@ export async function handlePullRequestEvent(payload) {
       `🔔 GitHub Webhook: review_requested\n` +
         `📂 Repository: ${repoFullName}\n` +
         `🔢 Issue Number: ${issueNumber}\n` +
+        `👥 Assignees: ${assigneesList}\n` +
         `👀 New Reviewer: ${requestedReviewer}\n` +
         `🔗 PR: ${payload.pull_request.html_url}`
     );
@@ -123,6 +129,7 @@ export async function handlePullRequestEvent(payload) {
       `🔔 GitHub Webhook: review_request_removed\n` +
         `📂 Repository: ${repoFullName}\n` +
         `🔢 Issue Number: ${issueNumber}\n` +
+        `👥 Assignees: ${assigneesList}\n` +
         `❌ Removed Reviewer: ${removedReviewer}\n` +
         `🔗 PR: ${payload.pull_request.html_url}`
     );
