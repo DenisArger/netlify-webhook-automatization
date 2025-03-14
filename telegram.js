@@ -1,3 +1,5 @@
+import { githubToTelegramMap } from "./config.js";
+
 async function sendTelegramMessage(text, debug = false) {
   let token = process.env.TELEGRAM_BOT_TOKEN;
   let chatId = process.env.TELEGRAM_CHAT_ID;
@@ -48,4 +50,8 @@ async function sendTelegramMessage(text, debug = false) {
   }
 }
 
-export { sendTelegramMessage };
+function mapGitHubToTelegram(username) {
+  return githubToTelegramMap[username] || username;
+}
+
+export { sendTelegramMessage, mapGitHubToTelegram };
