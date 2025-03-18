@@ -1,3 +1,4 @@
+import { nameProject } from "./config.js";
 import { getIssueAssignee, getPullRequestReviewers } from "./gitUtils.js";
 import {
   moveTaskToInProgress,
@@ -32,12 +33,14 @@ export async function handleCreateEvent(payload) {
         `🔢 Issue Number: ${issueNumber}\n` +
         `👤 Assigned: ${assignee}\n` +
         `🔗 Link: ${result.issueUrl || "no data"}\n` +
-        statusMessage
+        statusMessage,
+      debug
     );
   } catch (err) {
     console.error(`❌ Error moving issue ${issueNumber} to IN_PROGRESS:`, err);
     await sendTelegramMessage(
-      `❌ Error updating issue ${issueNumber}: ${err.message}`
+      `❌ Error updating issue ${issueNumber}: ${err.message}`,
+      debug
     );
   }
 }
@@ -73,12 +76,14 @@ export async function handlePullRequestEvent(payload) {
           `🔢 Issue Number: ${issueNumber}\n` +
           `👤 Assigned: ${assignee}\n` +
           `🔗 PR: ${payload.pull_request.html_url}\n` +
-          statusMessage
+          statusMessage,
+        debug
       );
     } catch (err) {
       console.error(`❌ Error moving issue ${issueNumber} to IN_REVIEW:`, err);
       await sendTelegramMessage(
-        `❌ Error updating issue ${issueNumber}: ${err.message}`
+        `❌ Error updating issue ${issueNumber}: ${err.message}`,
+        debug
       );
     }
   }
@@ -95,7 +100,8 @@ export async function handlePullRequestEvent(payload) {
           `🔢 Issue Number: ${issueNumber}\n` +
           `👤 Assigned: ${assignee}\n` +
           `🔗 PR: ${payload.pull_request.html_url}\n` +
-          statusMessage
+          statusMessage,
+        debug
       );
     } catch (err) {
       console.error(`❌ Error moving issue ${issueNumber} to DONE:`, err);
@@ -111,12 +117,10 @@ export async function handlePullRequestEvent(payload) {
     );
 
     await sendTelegramMessage(
-      `🔔 GitHub Webhook: review_requested\n` +
-        `📂 Repository: ${repoFullName}\n` +
-        `🔢 Issue Number: ${issueNumber}\n` +
-        `👥 Assignees: ${assigneesList}\n` +
-        `👀 New Reviewer: ${requestedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
+      `🔔 @Denis_Arger\n` +
+        `<a href="https://github.com/DenisArger/my-usfm-editor/pull/58">Check PR #19</a>\n` +
+        `🚀 <a href="https://deploy-preview-19--opa.netlify.app">Deploy</a>`,
+      { parse_mode: "HTML" }
     );
   }
 
