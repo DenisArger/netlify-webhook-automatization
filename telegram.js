@@ -1,19 +1,39 @@
 import { githubToTelegramMap } from "./config.js";
 
-async function sendTelegramMessage(text, debug = false) {
-  let token = process.env.TELEGRAM_BOT_TOKEN;
-  let chatId = process.env.TELEGRAM_CHAT_ID;
-  let messageThreadId = process.env.TELEGRAM_TOPIC_ID;
+/**
+ * Отправка сообщения в Telegram с гибкой настройкой параметров.
+ * @param {string} text - Текст сообщения.
+ * @param {object} options - Объект опций для настройки отправки.
+ *   debug {boolean} - Если true, используются переменные для отладки.
+ *   token {string} - Токен бота (если нужно переопределить).
+ *   chatId {string|number} - ID чата (если нужно переопределить).
+ *   messageThreadId {string|number} - ID темы сообщения (если нужно переопределить).
+ *   parse_mode {string} - Режим парсинга (например, "Markdown").
+ *   disable_notification {boolean} - Отключить уведомления.
+ */
+async function sendTelegramMessage(text, options = {}) {
+  const {
+    debug = false,
+    token: providedToken,
+    chatId: providedChatId,
+    messageThreadId: providedMessageThreadId,
+    parse_mode = "",
+    disable_notification = false,
+  } = options;
 
-  if (!debug) {
-    token = process.env.TELEGRAM_BOT_TOKEN;
-    chatId = process.env.TELEGRAM_CHAT_ID;
-    messageThreadId = process.env.TELEGRAM_TOPIC_ID;
-  } else {
-    token = process.env.TELEGRAM_BOT_TOKEN_DEBUG;
-    chatId = process.env.TELEGRAM_CHAT_ID_DEBUG;
-    messageThreadId = process.env.TELEGRAM_TOPIC_ID_DEBUG;
-  }
+  const token =
+    providedToken ||
+    (debug
+      ? process.env.TELEGRAM_BOT_TOKEN_DEBUG
+      : process.env.TELEGRAM_BOT_TOKEN);
+  const chatId =
+    providedChatId ||
+    (debug ? process.env.TELEGRAM_CHAT_ID_DEBUG : process.env.TELEGRAM_CHAT_ID);
+  const messageThreadId =
+    providedMessageThreadId ||
+    (debug
+      ? process.env.TELEGRAM_TOPIC_ID_DEBUG
+      : process.env.TELEGRAM_TOPIC_ID);
 
   if (!token || !chatId) {
     throw new Error(
@@ -25,7 +45,9 @@ async function sendTelegramMessage(text, debug = false) {
 
   const body = {
     chat_id: chatId,
-    text: text,
+    text,
+    parse_mode,
+    disable_notification,
   };
 
   if (messageThreadId) {

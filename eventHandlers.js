@@ -1,11 +1,51 @@
-import { getIssueAssignee, getPullRequestReviewers } from "./gitUtils.js";
+import { nameProject } from "./config.js";
+import { getIssueAssignee } from "./gitUtils.js";
 import {
   moveTaskToInProgress,
   moveTaskToInReview,
   moveTaskToDone,
 } from "./taskMover.js";
 import { mapGitHubToTelegram, sendTelegramMessage } from "./telegram.js";
-import { extractIssueNumber } from "./utils.js";
+import { escapeMarkdown, extractIssueNumber } from "./utils.js";
+
+/**
+ * Функция для перемещения карточки.
+ * Принимает номер задачи и функцию перемещения.
+ */
+async function moveCard(issueNumber, moveTaskFunction) {
+  return await moveTaskFunction(issueNumber);
+}
+
+/**
+ * Функция для формирования и отправки уведомления.
+ * Принимает объект с настройками уведомления.
+ * Все уведомления отправляются в отладочный чат (debug), если не указано иное.
+ */
+async function notifyCardUpdate({
+  eventType,
+  issueNumber,
+  repoFullName,
+  assignee,
+  result,
+  alreadyFlag,
+  stateLabel,
+  linkLabel,
+  linkValueFn,
+  format = "",
+}) {
+  const statusMessage = result[alreadyFlag]
+    ? `⚠️ Issue ${issueNumber} is already in ${stateLabel.toUpperCase()} status.`
+    : `✅ Issue ${issueNumber} successfully moved to ${stateLabel.toUpperCase()}.`;
+  const linkValue = linkValueFn ? linkValueFn(result) : "";
+  const message =
+    `🔔 GitHub Webhook: ${eventType}\n` +
+    `📂 Repository: ${repoFullName}\n` +
+    `🔢 Issue Number: ${issueNumber}\n` +
+    `👤 Assigned: ${assignee}\n` +
+    (linkValue ? `${linkLabel}: ${linkValue}\n` : "") +
+    statusMessage;
+  await sendTelegramMessage(message, { debug: true, parse_mode: format });
+}
 
 export async function handleCreateEvent(payload) {
   const branchName = payload.ref;
@@ -17,27 +57,27 @@ export async function handleCreateEvent(payload) {
     return;
   }
 
+  const repoFullName = payload.repository.full_name;
+  const assignee = await getIssueAssignee(repoFullName, issueNumber);
+
   try {
-    const repoFullName = payload?.repository?.full_name;
-    const assignee = await getIssueAssignee(repoFullName, issueNumber);
-    const result = await moveTaskToInProgress(issueNumber);
-
-    const statusMessage = result.alreadyInProgress
-      ? `⚠️ Issue ${issueNumber} is already in IN_PROGRESS status.`
-      : `✅ Issue ${issueNumber} successfully moved to IN_PROGRESS.`;
-
-    await sendTelegramMessage(
-      `🔔 GitHub Webhook: create\n` +
-        `📂 Repository: ${repoFullName}\n` +
-        `🔢 Issue Number: ${issueNumber}\n` +
-        `👤 Assigned: ${assignee}\n` +
-        `🔗 Link: ${result.issueUrl || "no data"}\n` +
-        statusMessage
-    );
+    const result = await moveCard(issueNumber, moveTaskToInProgress);
+    await notifyCardUpdate({
+      eventType: "create",
+      issueNumber,
+      repoFullName,
+      assignee,
+      result,
+      alreadyFlag: "alreadyInProgress",
+      stateLabel: "IN_PROGRESS",
+      linkLabel: "🔗 Link",
+      linkValueFn: (result) => result.issueUrl || "no data",
+    });
   } catch (err) {
     console.error(`❌ Error moving issue ${issueNumber} to IN_PROGRESS:`, err);
     await sendTelegramMessage(
-      `❌ Error updating issue ${issueNumber}: ${err.message}`
+      `❌ Error updating issue ${issueNumber}: ${err.message}`,
+      { debug: true }
     );
   }
 }
@@ -54,106 +94,97 @@ export async function handlePullRequestEvent(payload) {
 
   const repoFullName = payload.repository.full_name;
   const assignee = await getIssueAssignee(repoFullName, issueNumber);
-
   const assigneesArray = payload.pull_request.assignees || [];
   const assigneesList = assigneesArray.length
     ? assigneesArray.map((user) => user.login).join(", ")
     : "None";
 
-  if (payload.action === "opened") {
-    try {
-      const result = await moveTaskToInReview(issueNumber);
+  switch (payload.action) {
+    case "closed":
+      try {
+        const result = await moveCard(issueNumber, moveTaskToDone);
+        await notifyCardUpdate({
+          eventType: "pull_request (closed)",
+          issueNumber,
+          repoFullName,
+          assignee,
+          result,
+          alreadyFlag: "alreadyDone",
+          stateLabel: "DONE",
+          linkLabel: "🔗 PR",
+          linkValueFn: () => payload.pull_request.html_url,
+        });
+      } catch (err) {
+        console.error(`❌ Error moving issue ${issueNumber} to DONE:`, err);
+        await sendTelegramMessage(
+          `❌ Error updating issue ${issueNumber}: ${err.message}`,
+          { debug: true }
+        );
+      }
+      break;
 
-      const statusMessage = result.alreadyInReview
-        ? `⚠️ Issue ${issueNumber} is already in IN_REVIEW status.`
-        : `✅ Issue ${issueNumber} successfully moved to IN_REVIEW.`;
+    case "review_requested": {
+      const requestedReviewer = mapGitHubToTelegram(
+        payload.requested_reviewer?.login || "Unknown"
+      );
+      await moveCard(issueNumber, moveTaskToInReview);
+
+      const safeRequestedReviewer = escapeMarkdown(requestedReviewer);
       await sendTelegramMessage(
-        `🔔 GitHub Webhook: pull_request (opened)\n` +
+        `🔔  ${safeRequestedReviewer}\n` +
+          `🫡 Check please PR  [#19](${payload.pull_request.html_url}) (${nameProject})\n` +
+          `🚀 [Deploy](https://deploy-preview-${issueNumber}--${nameProject}.netlify.app)`,
+        { parse_mode: "Markdown", debug: false }
+      );
+      break;
+    }
+
+    case "review_request_removed": {
+      const removedReviewer = mapGitHubToTelegram(
+        payload.requested_reviewer?.login || "Unknown"
+      );
+      const safeRequestedReviewer = escapeMarkdown(removedReviewer);
+      await sendTelegramMessage(
+        `🔔  ${safeRequestedReviewer}\n` +
+          `🙈 I'm sorry, brother. Don't check the PR  [#19](${payload.pull_request.html_url})\n`,
+        { parse_mode: "Markdown", debug: false }
+      );
+      break;
+    }
+
+    case "assigned": {
+      const requestedReviewer = mapGitHubToTelegram(
+        payload.requested_reviewer?.login || "Unknown"
+      );
+      await sendTelegramMessage(
+        `🔔 GitHub Webhook: assignee_added\n` +
           `📂 Repository: ${repoFullName}\n` +
           `🔢 Issue Number: ${issueNumber}\n` +
-          `👤 Assigned: ${assignee}\n` +
-          `🔗 PR: ${payload.pull_request.html_url}\n` +
-          statusMessage
+          `👥 Assignees: ${assigneesList}\n` +
+          `👀 Reviewer: ${requestedReviewer}\n` +
+          `🔗 PR: ${payload.pull_request.html_url}`,
+        { debug: true }
       );
-    } catch (err) {
-      console.error(`❌ Error moving issue ${issueNumber} to IN_REVIEW:`, err);
-      await sendTelegramMessage(
-        `❌ Error updating issue ${issueNumber}: ${err.message}`
-      );
+      break;
     }
-  }
 
-  if (payload.action === "closed") {
-    try {
-      const result = await moveTaskToDone(issueNumber);
-      const statusMessage = result.alreadyDone
-        ? `⚠️ Issue ${issueNumber} is already in DONE status.`
-        : `✅ Issue ${issueNumber} successfully moved to DONE.`;
+    case "unassigned": {
+      const requestedReviewer = mapGitHubToTelegram(
+        payload.requested_reviewer?.login || "Unknown"
+      );
       await sendTelegramMessage(
-        `🔔 GitHub Webhook: pull_request (closed)\n` +
+        `🔔 GitHub Webhook: assignee_removed\n` +
           `📂 Repository: ${repoFullName}\n` +
           `🔢 Issue Number: ${issueNumber}\n` +
-          `👤 Assigned: ${assignee}\n` +
-          `🔗 PR: ${payload.pull_request.html_url}\n` +
-          statusMessage
+          `👥 Assignees: ${assigneesList}\n` +
+          `👀 Reviewer: ${requestedReviewer}\n` +
+          `🔗 PR: ${payload.pull_request.html_url}`,
+        { debug: true }
       );
-    } catch (err) {
-      console.error(`❌ Error moving issue ${issueNumber} to DONE:`, err);
-      await sendTelegramMessage(
-        `❌ Error updating issue ${issueNumber}: ${err.message}`
-      );
+      break;
     }
-  }
 
-  if (payload.action === "review_requested") {
-    const requestedReviewer = mapGitHubToTelegram(
-      payload.requested_reviewer?.login || "Unknown"
-    );
-
-    await sendTelegramMessage(
-      `🔔 GitHub Webhook: review_requested\n` +
-        `📂 Repository: ${repoFullName}\n` +
-        `🔢 Issue Number: ${issueNumber}\n` +
-        `👥 Assignees: ${assigneesList}\n` +
-        `👀 New Reviewer: ${requestedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
-    );
-  }
-
-  if (payload.action === "review_request_removed") {
-    const removedReviewer = mapGitHubToTelegram(
-      payload.requested_reviewer?.login || "Unknown"
-    );
-
-    await sendTelegramMessage(
-      `🔔 GitHub Webhook: review_request_removed\n` +
-        `📂 Repository: ${repoFullName}\n` +
-        `🔢 Issue Number: ${issueNumber}\n` +
-        `👥 Assignees: ${assigneesList}\n` +
-        `❌ Removed Reviewer: ${removedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
-    );
-  }
-
-  if (payload.action === "assigned") {
-    await sendTelegramMessage(
-      `🔔 GitHub Webhook: assignee_added\n` +
-        `📂 Repository: ${repoFullName}\n` +
-        `🔢 Issue Number: ${issueNumber}\n` +
-        `👥 Assignees: ${assigneesList}\n` +
-        `👀 Reviewer: ${requestedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
-    );
-  }
-
-  if (payload.action === "unassigned") {
-    await sendTelegramMessage(
-      `🔔 GitHub Webhook: assignee_removed\n` +
-        `📂 Repository: ${repoFullName}\n` +
-        `🔢 Issue Number: ${issueNumber}\n` +
-        `👥 Assignees: ${assigneesList}\n` +
-        `👀 Reviewer: ${requestedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
-    );
+    default:
+      console.warn(`Unhandled pull request action: ${payload.action}`);
   }
 }

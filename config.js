@@ -6,3 +6,5 @@ export const githubToTelegramMap = {
   "Vitalii-250885": "@pva_alex",
   foxprogs: "@foxprogs",
 };
+
+export const nameProject = process.env.NAME_PROJECT;
