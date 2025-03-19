@@ -11,3 +11,7 @@ export function extractIssueNumber(branchName) {
   const match = branchName.match(/^(feature|fix)-[a-z]+-(\d+)-[a-z0-9-]+$/i);
   return match ? match[2] : null;
 }
+
+export function escapeMarkdown(text) {
+  return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, "\\$1");
+}
