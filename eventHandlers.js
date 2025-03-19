@@ -132,8 +132,8 @@ export async function handlePullRequestEvent(payload) {
       const safeRequestedReviewer = escapeMarkdown(requestedReviewer);
       await sendTelegramMessage(
         `🔔  ${safeRequestedReviewer}\n` +
-          `🫡 Check please PR  [#19](${payload.pull_request.html_url}) (${nameProject})\n` +
-          `🚀 [Deploy](https://deploy-preview-${issueNumber}--${nameProject}.netlify.app)`,
+          `🫡 Check please PR [#${payload.pull_request.number}](${payload.pull_request.html_url}) (${nameProject})\n` +
+          `🚀 [Deploy](https://deploy-preview-${payload.pull_request.number}--${nameProject}.netlify.app)`,
         { parse_mode: "Markdown", debug: false }
       );
       break;
