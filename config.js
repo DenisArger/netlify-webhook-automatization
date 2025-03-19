@@ -7,5 +7,4 @@ export const githubToTelegramMap = {
   foxprogs: "@foxprogs",
 };
 
-export const nameProject = "opa";
-// export const nameProject = 'skillapp';
+export const nameProject = process.env.NAME_PROJECT;
