@@ -34,13 +34,15 @@ export async function handleCreateEvent(payload) {
         `👤 Assigned: ${assignee}\n` +
         `🔗 Link: ${result.issueUrl || "no data"}\n` +
         statusMessage,
-      debug
+      "",
+      true
     );
   } catch (err) {
     console.error(`❌ Error moving issue ${issueNumber} to IN_PROGRESS:`, err);
     await sendTelegramMessage(
       `❌ Error updating issue ${issueNumber}: ${err.message}`,
-      debug
+      "",
+      true
     );
   }
 }
@@ -77,13 +79,15 @@ export async function handlePullRequestEvent(payload) {
           `👤 Assigned: ${assignee}\n` +
           `🔗 PR: ${payload.pull_request.html_url}\n` +
           statusMessage,
-        debug
+        "",
+        true
       );
     } catch (err) {
       console.error(`❌ Error moving issue ${issueNumber} to IN_REVIEW:`, err);
       await sendTelegramMessage(
         `❌ Error updating issue ${issueNumber}: ${err.message}`,
-        debug
+        "",
+        true
       );
     }
   }
@@ -101,12 +105,15 @@ export async function handlePullRequestEvent(payload) {
           `👤 Assigned: ${assignee}\n` +
           `🔗 PR: ${payload.pull_request.html_url}\n` +
           statusMessage,
-        debug
+        "",
+        true
       );
     } catch (err) {
       console.error(`❌ Error moving issue ${issueNumber} to DONE:`, err);
       await sendTelegramMessage(
-        `❌ Error updating issue ${issueNumber}: ${err.message}`
+        `❌ Error updating issue ${issueNumber}: ${err.message}`,
+        "",
+        true
       );
     }
   }
@@ -117,10 +124,11 @@ export async function handlePullRequestEvent(payload) {
     );
 
     await sendTelegramMessage(
-      `🔔 @Denis_Arger\n` +
-        `<a href="https://github.com/DenisArger/my-usfm-editor/pull/58">Check PR #19</a>\n` +
-        `🚀 <a href="https://deploy-preview-19--opa.netlify.app">Deploy</a>`,
-      { parse_mode: "HTML" }
+      `🔔  ${requestedReviewer}\n` +
+        `🫡 Check please PR  <a href="${payload.pull_request.html_url}">#19</a>\n` +
+        `🚀 <a href="https://deploy-preview-${issueNumber}--${nameProject}.netlify.app">Deploy</a>`,
+      "HTML",
+      true
     );
   }
 
@@ -130,34 +138,42 @@ export async function handlePullRequestEvent(payload) {
     );
 
     await sendTelegramMessage(
-      `🔔 GitHub Webhook: review_request_removed\n` +
-        `📂 Repository: ${repoFullName}\n` +
-        `🔢 Issue Number: ${issueNumber}\n` +
-        `👥 Assignees: ${assigneesList}\n` +
-        `❌ Removed Reviewer: ${removedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
+      `🔔  ${removedReviewer}\n` +
+        `🙈 I'm sorry, brother. Don't check the PR  <a href="${payload.pull_request.html_url}">#19</a>\n`,
+      "HTML",
+      true
     );
   }
 
   if (payload.action === "assigned") {
+    const requestedReviewer = mapGitHubToTelegram(
+      payload.requested_reviewer?.login || "Unknown"
+    );
     await sendTelegramMessage(
       `🔔 GitHub Webhook: assignee_added\n` +
         `📂 Repository: ${repoFullName}\n` +
         `🔢 Issue Number: ${issueNumber}\n` +
         `👥 Assignees: ${assigneesList}\n` +
         `👀 Reviewer: ${requestedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
+        `🔗 PR: ${payload.pull_request.html_url}`,
+      "",
+      true
     );
   }
 
   if (payload.action === "unassigned") {
+    const requestedReviewer = mapGitHubToTelegram(
+      payload.requested_reviewer?.login || "Unknown"
+    );
     await sendTelegramMessage(
       `🔔 GitHub Webhook: assignee_removed\n` +
         `📂 Repository: ${repoFullName}\n` +
         `🔢 Issue Number: ${issueNumber}\n` +
         `👥 Assignees: ${assigneesList}\n` +
         `👀 Reviewer: ${requestedReviewer}\n` +
-        `🔗 PR: ${payload.pull_request.html_url}`
+        `🔗 PR: ${payload.pull_request.html_url}`,
+      "",
+      true
     );
   }
 }
