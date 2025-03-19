@@ -6,57 +6,45 @@ import {
   moveTaskToDone,
 } from "./taskMover.js";
 import { mapGitHubToTelegram, sendTelegramMessage } from "./telegram.js";
-import { extractIssueNumber } from "./utils.js";
+import { escapeMarkdown, extractIssueNumber } from "./utils.js";
 
 /**
- * Универсальная функция для обработки изменений статуса задачи.
- * Принимает объект с настройками:
- * - eventType: тип вебхука для отображения (например, "create" или "pull_request (opened)")
- * - issueNumber: номер задачи
- * - repoFullName: полное имя репозитория
- * - assignee: ответственный
- * - moveTaskFunction: функция для изменения статуса задачи
- * - alreadyFlag: имя булевого свойства результата, обозначающее, что задача уже в нужном статусе
- * - stateLabel: метка статуса (например, "IN_PROGRESS")
- * - linkLabel: ярлык для ссылки (например, "🔗 Link" или "🔗 PR")
- * - linkValueFn: функция для извлечения ссылки из результата или payload
+ * Функция для перемещения карточки.
+ * Принимает номер задачи и функцию перемещения.
  */
-async function processTaskEvent({
+async function moveCard(issueNumber, moveTaskFunction) {
+  return await moveTaskFunction(issueNumber);
+}
+
+/**
+ * Функция для формирования и отправки уведомления.
+ * Принимает объект с настройками уведомления.
+ * Все уведомления отправляются в отладочный чат (debug), если не указано иное.
+ */
+async function notifyCardUpdate({
   eventType,
   issueNumber,
   repoFullName,
   assignee,
-  moveTaskFunction,
+  result,
   alreadyFlag,
   stateLabel,
   linkLabel,
   linkValueFn,
+  format = "",
 }) {
-  try {
-    const result = await moveTaskFunction(issueNumber);
-    const statusMessage = result[alreadyFlag]
-      ? `⚠️ Issue ${issueNumber} is already in ${stateLabel.toUpperCase()} status.`
-      : `✅ Issue ${issueNumber} successfully moved to ${stateLabel.toUpperCase()}.`;
-    const linkValue = linkValueFn ? linkValueFn(result) : "";
-    const message =
-      `🔔 GitHub Webhook: ${eventType}\n` +
-      `📂 Repository: ${repoFullName}\n` +
-      `🔢 Issue Number: ${issueNumber}\n` +
-      `👤 Assigned: ${assignee}\n` +
-      (linkValue ? `${linkLabel}: ${linkValue}\n` : "") +
-      statusMessage;
-    await sendTelegramMessage(message, "", true);
-  } catch (err) {
-    console.error(
-      `❌ Error moving issue ${issueNumber} to ${stateLabel.toUpperCase()}:`,
-      err
-    );
-    await sendTelegramMessage(
-      `❌ Error updating issue ${issueNumber}: ${err.message}`,
-      "",
-      true
-    );
-  }
+  const statusMessage = result[alreadyFlag]
+    ? `⚠️ Issue ${issueNumber} is already in ${stateLabel.toUpperCase()} status.`
+    : `✅ Issue ${issueNumber} successfully moved to ${stateLabel.toUpperCase()}.`;
+  const linkValue = linkValueFn ? linkValueFn(result) : "";
+  const message =
+    `🔔 GitHub Webhook: ${eventType}\n` +
+    `📂 Repository: ${repoFullName}\n` +
+    `🔢 Issue Number: ${issueNumber}\n` +
+    `👤 Assigned: ${assignee}\n` +
+    (linkValue ? `${linkLabel}: ${linkValue}\n` : "") +
+    statusMessage;
+  await sendTelegramMessage(message, { debug: true, parse_mode: format });
 }
 
 export async function handleCreateEvent(payload) {
@@ -72,17 +60,26 @@ export async function handleCreateEvent(payload) {
   const repoFullName = payload.repository.full_name;
   const assignee = await getIssueAssignee(repoFullName, issueNumber);
 
-  await processTaskEvent({
-    eventType: "create",
-    issueNumber,
-    repoFullName,
-    assignee,
-    moveTaskFunction: moveTaskToInProgress,
-    alreadyFlag: "alreadyInProgress",
-    stateLabel: "IN_PROGRESS",
-    linkLabel: "🔗 Link",
-    linkValueFn: (result) => result.issueUrl || "no data",
-  });
+  try {
+    const result = await moveCard(issueNumber, moveTaskToInProgress);
+    await notifyCardUpdate({
+      eventType: "create",
+      issueNumber,
+      repoFullName,
+      assignee,
+      result,
+      alreadyFlag: "alreadyInProgress",
+      stateLabel: "IN_PROGRESS",
+      linkLabel: "🔗 Link",
+      linkValueFn: (result) => result.issueUrl || "no data",
+    });
+  } catch (err) {
+    console.error(`❌ Error moving issue ${issueNumber} to IN_PROGRESS:`, err);
+    await sendTelegramMessage(
+      `❌ Error updating issue ${issueNumber}: ${err.message}`,
+      { debug: true }
+    );
+  }
 }
 
 export async function handlePullRequestEvent(payload) {
@@ -103,44 +100,41 @@ export async function handlePullRequestEvent(payload) {
     : "None";
 
   switch (payload.action) {
-    case "opened":
-      await processTaskEvent({
-        eventType: "pull_request (opened)",
-        issueNumber,
-        repoFullName,
-        assignee,
-        moveTaskFunction: moveTaskToInReview,
-        alreadyFlag: "alreadyInReview",
-        stateLabel: "IN_REVIEW",
-        linkLabel: "🔗 PR",
-        linkValueFn: () => payload.pull_request.html_url,
-      });
-      break;
-
     case "closed":
-      await processTaskEvent({
-        eventType: "pull_request (closed)",
-        issueNumber,
-        repoFullName,
-        assignee,
-        moveTaskFunction: moveTaskToDone,
-        alreadyFlag: "alreadyDone",
-        stateLabel: "DONE",
-        linkLabel: "🔗 PR",
-        linkValueFn: () => payload.pull_request.html_url,
-      });
+      try {
+        const result = await moveCard(issueNumber, moveTaskToDone);
+        await notifyCardUpdate({
+          eventType: "pull_request (closed)",
+          issueNumber,
+          repoFullName,
+          assignee,
+          result,
+          alreadyFlag: "alreadyDone",
+          stateLabel: "DONE",
+          linkLabel: "🔗 PR",
+          linkValueFn: () => payload.pull_request.html_url,
+        });
+      } catch (err) {
+        console.error(`❌ Error moving issue ${issueNumber} to DONE:`, err);
+        await sendTelegramMessage(
+          `❌ Error updating issue ${issueNumber}: ${err.message}`,
+          { debug: true }
+        );
+      }
       break;
 
     case "review_requested": {
       const requestedReviewer = mapGitHubToTelegram(
         payload.requested_reviewer?.login || "Unknown"
       );
+      await moveCard(issueNumber, moveTaskToInReview);
+
+      const safeRequestedReviewer = escapeMarkdown(requestedReviewer);
       await sendTelegramMessage(
-        `🔔  ${requestedReviewer}\n` +
-          `🫡 Check please PR  <a href="${payload.pull_request.html_url}">#19</a>\n` +
-          `🚀 <a href="https://deploy-preview-${issueNumber}--${nameProject}.netlify.app">Deploy</a>`,
-        "HTML",
-        true
+        `🔔  ${safeRequestedReviewer}\n` +
+          `🫡 Check please PR  [#19](${payload.pull_request.html_url})\n` +
+          `🚀 [Deploy](https://deploy-preview-${issueNumber}--${nameProject}.netlify.app)`,
+        { parse_mode: "Markdown", debug: false }
       );
       break;
     }
@@ -149,11 +143,11 @@ export async function handlePullRequestEvent(payload) {
       const removedReviewer = mapGitHubToTelegram(
         payload.requested_reviewer?.login || "Unknown"
       );
+      const safeRequestedReviewer = escapeMarkdown(removedReviewer);
       await sendTelegramMessage(
-        `🔔  ${removedReviewer}\n` +
-          `🙈 I'm sorry, brother. Don't check the PR  <a href="${payload.pull_request.html_url}">#19</a>\n`,
-        "HTML",
-        true
+        `🔔  ${safeRequestedReviewer}\n` +
+          `🙈 I'm sorry, brother. Don't check the PR  [#19](${payload.pull_request.html_url})\n`,
+        { parse_mode: "Markdown", debug: false }
       );
       break;
     }
@@ -169,8 +163,7 @@ export async function handlePullRequestEvent(payload) {
           `👥 Assignees: ${assigneesList}\n` +
           `👀 Reviewer: ${requestedReviewer}\n` +
           `🔗 PR: ${payload.pull_request.html_url}`,
-        "",
-        true
+        { debug: true }
       );
       break;
     }
@@ -186,8 +179,7 @@ export async function handlePullRequestEvent(payload) {
           `👥 Assignees: ${assigneesList}\n` +
           `👀 Reviewer: ${requestedReviewer}\n` +
           `🔗 PR: ${payload.pull_request.html_url}`,
-        "",
-        true
+        { debug: true }
       );
       break;
     }
